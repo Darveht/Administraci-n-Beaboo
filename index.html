@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="en" >
+<head>
+  <meta charset="UTF-8">
+  <title>Untitled</title>
+  
+
+</head>
+<body>
+<!-- partial:index.partial.html -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Dashboard - BeaBoo</title>
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700&display=swap" rel="stylesheet">
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" 
+        integrity="sha512-pap6t+K2bD6xIxQqkQ3sM8e+RXw7C3DyrgXV++o2aL/88+/9kS/l+SmpD8zZR1oN40Nq3QfT7HigDYfFW1zZAQ==" 
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <!-- Firebase (compat) -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <script>
+    // Configuración de Firebase (la misma que en tu código original)
+    const firebaseConfig = {
+      apiKey: "AIzaSyA1UV_OTjRjq22RRB1REnhWzMLZQNCB6wA",
+      authDomain: "love-alarm-5c538.firebaseapp.com",
+      databaseURL: "https://love-alarm-5c538-default-rtdb.firebaseio.com",
+      projectId: "love-alarm-5c538",
+      storageBucket: "love-alarm-5c538.appspot.com",
+      messagingSenderId: "147543369973",
+      appId: "1:147543369973:web:3ef19a73190bce85b27dbc",
+      measurementId: "G-VYVPK5VSB5"
+    };
+    firebase.initializeApp(firebaseConfig);
+  </script>
+  <style>
+    body { font-family: 'Nunito', sans-serif; }
+    /* CABECERA FIJA */
+    header {
+      background-color: #fff;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      padding: 0.75rem 1rem;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 50;
+    }
+    /* Barra de pestañas (navegación horizontal) */
+    nav.tabs {
+      display: flex;
+      overflow-x: auto;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      background-color: #f3f4f6;
+    }
+    nav.tabs button {
+      flex: none;
+      white-space: nowrap;
+    }
+    /* Contenedor principal para el dashboard */
+    #adminDashboardMain {
+      margin-top: 120px; /* espacio para header y tabs */
+    }
+    /* Tarjetas (cards) para cada sección */
+    .card {
+      background-color: #fff;
+      padding: 1rem;
+      border-radius: 0.5rem;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      margin-bottom: 1rem;
+    }
+    /* Spinner estilo TikTok: dos bolitas animadas */
+    .spinner-tiktok {
+      display: inline-block;
+      position: relative;
+      width: 80px;
+      height: 80px;
+    }
+    .spinner-tiktok div {
+      position: absolute;
+      border: 4px solid #58CC02;
+      opacity: 1;
+      border-radius: 50%;
+      animation: spinner-tiktok 1s cubic-bezier(0, 0.2, 0.8, 1) infinite;
+    }
+    .spinner-tiktok div:nth-child(2) {
+      animation-delay: -0.5s;
+    }
+    @keyframes spinner-tiktok {
+      0% { transform: scale(0); }
+      50% { transform: scale(1); opacity: 0.5; }
+      100% { transform: scale(0); opacity: 0; }
+    }
+    /* Modal de respuesta (Reply Modal) */
+    #replyModal {
+      position: fixed;
+      inset: 0;
+      background-color: rgba(0,0,0,0.5);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 100;
+    }
+    #replyModal .modal-content {
+      background: #fff;
+      padding: 2rem;
+      border-radius: 8px;
+      width: 90%;
+      max-width: 500px;
+    }
+    /* Modal para administrar historias de un autor */
+    #storiesModal {
+      position: fixed;
+      inset: 0;
+      background-color: rgba(0,0,0,0.5);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 100;
+    }
+    #storiesModal .modal-content {
+      background: #fff;
+      padding: 1.5rem;
+      border-radius: 8px;
+      width: 95%;
+      max-width: 800px;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+  </style>
+</head>
+<body class="bg-gray-100">
+  <!-- LOGIN DEL ADMIN (Pantalla completa) -->
+  <div id="admin-login" class="flex items-center justify-center min-h-screen">
+    <div class="bg-white p-8 rounded shadow-md w-full max-w-md">
+      <h2 class="text-2xl font-bold mb-4 text-center">Panel de Administración</h2>
+      <form id="adminLoginForm" class="space-y-4">
+        <div class="relative">
+          <i class="fas fa-envelope absolute left-3 top-3 text-gray-400"></i>
+          <input type="email" id="adminEmail" placeholder="Correo electrónico" class="w-full p-3 pl-10 border rounded" required>
+        </div>
+        <div class="relative">
+          <i class="fas fa-lock absolute left-3 top-3 text-gray-400"></i>
+          <input type="password" id="adminPassword" placeholder="Contraseña" class="w-full p-3 pl-10 border rounded" required>
+        </div>
+        <button type="submit" class="w-full bg-[#58CC02] text-white p-3 rounded flex items-center justify-center">
+          <i class="fas fa-sign-in-alt mr-2"></i> Iniciar Sesión
+        </button>
+      </form>
+      <div id="adminError" class="mt-4 text-red-500 hidden"></div>
+    </div>
+  </div>
+  
+  <!-- DASHBOARD DEL ADMIN (se muestra después del login) -->
+  <div id="adminDashboard" class="hidden">
+    <!-- CABECERA FIJA (ya se ve en el login; en el dashboard se usa la misma cabecera) -->
+    <header class="flex items-center justify-between">
+      <h1 class="text-2xl font-bold">Panel de Administración</h1>
+      <button onclick="adminSignOut()" class="bg-red-500 text-white px-3 py-2 rounded flex items-center">
+        <i class="fas fa-sign-out-alt mr-2"></i> Cerrar Sesión
+      </button>
+    </header>
+    <!-- Barra de pestañas -->
+    <nav class="tabs mt-20">
+      <button class="admin-tab px-4 py-2 bg-[#58CC02] text-white rounded" onclick="showTab('reports', event)">
+        <i class="fas fa-flag mr-1"></i> Reportes
+      </button>
+      <button class="admin-tab px-4 py-2 bg-gray-300 text-gray-700 rounded" onclick="showTab('support', event)">
+        <i class="fas fa-headset mr-1"></i> Soporte
+      </button>
+      <button class="admin-tab px-4 py-2 bg-gray-300 text-gray-700 rounded" onclick="showTab('users', event)">
+        <i class="fas fa-user-slash mr-1"></i> Bloqueados
+      </button>
+      <button class="admin-tab px-4 py-2 bg-gray-300 text-gray-700 rounded" onclick="showTab('verify', event)">
+        <i class="fas fa-check-circle mr-1"></i> Verificación
+      </button>
+      <button class="admin-tab px-4 py-2 bg-gray-300 text-gray-700 rounded" onclick="showTab('stories', event)">
+        <i class="fas fa-book mr-1"></i> Historias
+      </button>
+    </nav>
+    <!-- Contenido principal del dashboard -->
+    <main id="adminDashboardMain" class="container mx-auto px-4">
+      <!-- Sección Reportes -->
+      <section id="reportsTab" class="admin-tab-content">
+        <h2 class="text-2xl font-bold mb-4">Reportes Recibidos</h2>
+        <div id="reportsList" class="space-y-4"></div>
+      </section>
+      <!-- Sección Soporte -->
+      <section id="supportTab" class="admin-tab-content hidden">
+        <h2 class="text-2xl font-bold mb-4">Solicitudes de Soporte</h2>
+        <div id="supportList" class="space-y-4"></div>
+      </section>
+      <!-- Sección Usuarios Bloqueados -->
+      <section id="usersTab" class="admin-tab-content hidden">
+        <h2 class="text-2xl font-bold mb-4">Usuarios Bloqueados</h2>
+        <div id="blockedUsersList" class="space-y-4"></div>
+      </section>
+      <!-- Sección Verificación -->
+      <section id="verifyTab" class="admin-tab-content hidden">
+        <h2 class="text-2xl font-bold mb-4">Verificar Usuario</h2>
+        <div class="mb-4">
+          <input type="text" id="verifyUserId" placeholder="Ingrese ID del usuario" class="w-full p-3 border rounded">
+        </div>
+        <button onclick="verifyUser()" class="w-full bg-blue-500 text-white p-3 rounded flex items-center justify-center">
+          <i class="fas fa-check mr-2"></i> Marcar como Verificado
+        </button>
+        <div id="verifiedUsersList" class="mt-6"></div>
+      </section>
+      <!-- Sección Historias de Autores -->
+      <section id="storiesTab" class="admin-tab-content hidden">
+        <h2 class="text-2xl font-bold mb-4">Historias por Autor</h2>
+        <div id="authorsList" class="space-y-4"></div>
+      </section>
+    </main>
+  </div>
+  
+  <!-- MODAL DE RESPUESTA (Reply Modal) -->
+  <div id="replyModal">
+    <div class="modal-content">
+      <h2 class="text-xl font-bold mb-4">Enviar Respuesta</h2>
+      <textarea id="replyMessage" placeholder="Escribe tu respuesta aquí..." class="w-full border p-2 rounded mb-4" rows="5"></textarea>
+      <div class="flex justify-end">
+        <button onclick="closeReplyModal()" class="mr-4 bg-gray-500 text-white px-4 py-2 rounded flex items-center">
+          <i class="fas fa-times mr-1"></i> Cancelar
+        </button>
+        <button onclick="sendReply()" class="bg-[#58CC02] text-white px-4 py-2 rounded flex items-center">
+          <i class="fas fa-paper-plane mr-1"></i> Enviar
+        </button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- MODAL PARA ADMINISTRAR HISTORIAS DE UN AUTOR -->
+  <div id="storiesModal" class="hidden">
+    <div class="modal-content">
+      <div class="flex justify-between items-center mb-4">
+        <h2 id="modalAuthorName" class="text-2xl font-bold">Historias de [Autor]</h2>
+        <button onclick="closeStoriesModal()" class="text-gray-500 text-3xl">&times;</button>
+      </div>
+      <div id="authorStoriesList" class="grid grid-cols-1 gap-4"></div>
+    </div>
+  </div>
+  
+  <!-- SPINNER DE CARGA (TikTok Style) -->
+  <div id="loadingSpinner" class="fixed inset-0 bg-white bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <div class="spinner-tiktok">
+      <div></div>
+      <div></div>
+    </div>
+  </div>
+  
+  <script>
+    // Variables globales para el reply modal y administración de historias
+    let replyTargetUser = null;
+    let replyContext = "";
+    let currentAuthorForStories = null;
+    
+    // ADMIN LOGIN
+    document.getElementById('adminLoginForm').addEventListener('submit', function(e){
+      e.preventDefault();
+      const email = document.getElementById('adminEmail').value;
+      const password = document.getElementById('adminPassword').value;
+      firebase.auth().signInWithEmailAndPassword(email, password)
+        .then(userCredential => {
+          const user = userCredential.user;
+          if(user.email !== "darelvega6@icloud.com"){
+            document.getElementById('adminError').innerText = "Acceso denegado. No eres administrador.";
+            document.getElementById('adminError').classList.remove('hidden');
+            firebase.auth().signOut();
+            return;
+          }
+          document.getElementById('admin-login').classList.add('hidden');
+          document.getElementById('adminDashboard').classList.remove('hidden');
+          loadReports();
+          loadSupportRequests();
+          loadBlockedUsers();
+          loadAuthorsForStories();
+          loadVerifiedUsers();
+        })
+        .catch(error => {
+          document.getElementById('adminError').innerText = error.message;
+          document.getElementById('adminError').classList.remove('hidden');
+        });
+    });
+    
+    function adminSignOut(){
+      firebase.auth().signOut().then(() => {
+        location.reload();
+      });
+    }
+    
+    // Cambiar de pestaña
+    function showTab(tabName, event){
+      document.querySelectorAll('.admin-tab-content').forEach(tab => tab.classList.add('hidden'));
+      document.getElementById(tabName + "Tab").classList.remove('hidden');
+      document.querySelectorAll('.admin-tab').forEach(button => {
+        button.classList.remove('bg-[#58CC02]', 'text-white');
+        button.classList.add('bg-gray-300', 'text-gray-700');
+      });
+      event.target.classList.add('bg-[#58CC02]', 'text-white');
+    }
+    
+    /********** REPORTES **********/
+    function loadReports(){
+      const reportsRef = firebase.database().ref('reports');
+      reportsRef.on('value', snapshot => {
+        const reportsList = document.getElementById('reportsList');
+        reportsList.innerHTML = "";
+        snapshot.forEach(child => {
+          const report = child.val();
+          const reportDiv = document.createElement('div');
+          reportDiv.className = "card";
+          reportDiv.innerHTML = `
+            <p><strong>Reportado:</strong> ${report.reportedName} <span class="text-sm">(${report.reportedUser})</span></p>
+            <p><strong>Reportado por:</strong> ${report.reporterName}</p>
+            <p><strong>Motivo:</strong> ${report.reason}</p>
+            <p><strong>Descripción:</strong> ${report.description}</p>
+            <p><strong>Fecha:</strong> ${new Date(report.timestamp).toLocaleString()}</p>
+            <p><strong>Estado:</strong> ${report.status}</p>
+            <div class="flex flex-wrap gap-2 mt-2">
+              <button class="bg-blue-500 text-white px-3 py-1 rounded flex items-center" onclick="openReplyModal('${report.reporter}', 'report')">
+                <i class="fas fa-reply mr-1"></i> Responder
+              </button>
+              <button class="bg-green-500 text-white px-3 py-1 rounded flex items-center" onclick="updateReportStatus('${child.key}', 'accepted')">
+                <i class="fas fa-check mr-1"></i> Aceptar
+              </button>
+              <button class="bg-red-500 text-white px-3 py-1 rounded flex items-center" onclick="updateReportStatus('${child.key}', 'rejected')">
+                <i class="fas fa-times mr-1"></i> Rechazar
+              </button>
+              <button class="bg-gray-700 text-white px-3 py-1 rounded flex items-center" onclick="blockUser('${report.reportedUser}')">
+                <i class="fas fa-ban mr-1"></i> Bloquear
+              </button>
+            </div>
+          `;
+          reportsList.appendChild(reportDiv);
+        });
+      });
+    }
+    
+    function updateReportStatus(reportId, newStatus){
+      firebase.database().ref('reports/' + reportId).update({ status: newStatus })
+        .then(() => { alert("Reporte actualizado a: " + newStatus); })
+        .catch(error => { console.error("Error al actualizar reporte:", error); });
+    }
+    
+    /********** SOPORTE **********/
+    function loadSupportRequests(){
+      const supportRef = firebase.database().ref('supportRequests');
+      supportRef.on('value', snapshot => {
+        const supportList = document.getElementById('supportList');
+        supportList.innerHTML = "";
+        snapshot.forEach(child => {
+          const support = child.val();
+          const supportDiv = document.createElement('div');
+          supportDiv.className = "card";
+          supportDiv.innerHTML = `
+            <p><strong>Usuario:</strong> ${support.userId}</p>
+            <p><strong>Asunto:</strong> ${support.subject}</p>
+            <p><strong>Mensaje:</strong> ${support.message}</p>
+            <p><strong>Fecha:</strong> ${new Date(support.timestamp).toLocaleString()}</p>
+            <p><strong>Estado:</strong> ${support.status}</p>
+            <div class="flex flex-wrap gap-2 mt-2">
+              <button class="bg-blue-500 text-white px-3 py-1 rounded flex items-center" onclick="openReplyModal('${support.userId}', 'support')">
+                <i class="fas fa-reply mr-1"></i> Responder
+              </button>
+              <button class="bg-green-500 text-white px-3 py-1 rounded flex items-center" onclick="updateSupportStatus('${child.key}', 'resolved')">
+                <i class="fas fa-check mr-1"></i> Resuelto
+              </button>
+            </div>
+          `;
+          supportList.appendChild(supportDiv);
+        });
+      });
+    }
+    
+    function updateSupportStatus(requestId, newStatus){
+      firebase.database().ref('supportRequests/' + requestId).update({ status: newStatus })
+        .then(() => { alert("Soporte actualizado a: " + newStatus); })
+        .catch(error => { console.error("Error al actualizar soporte:", error); });
+    }
+    
+    /********** USUARIOS BLOQUEADOS **********/
+    function loadBlockedUsers(){
+      const usersRef = firebase.database().ref('users');
+      usersRef.orderByChild('blocked').equalTo(true).on('value', snapshot => {
+        const blockedList = document.getElementById('blockedUsersList');
+        blockedList.innerHTML = "";
+        snapshot.forEach(child => {
+          const user = child.val();
+          const userDiv = document.createElement('div');
+          userDiv.className = "card";
+          userDiv.innerHTML = `
+            <p><strong>Usuario:</strong> ${user.username} (${child.key})</p>
+            <p><strong>Bloqueado hasta:</strong> ${new Date(user.blockedUntil).toLocaleString()}</p>
+            <button class="bg-green-500 text-white px-3 py-1 rounded flex items-center" onclick="unblockUser('${child.key}')">
+              <i class="fas fa-unlock mr-1"></i> Desbloquear
+            </button>
+          `;
+          blockedList.appendChild(userDiv);
+        });
+      });
+    }
+    
+    function unblockUser(userId){
+      firebase.database().ref('users/' + userId).update({ blocked: false, blockedUntil: null })
+        .then(() => { alert("Usuario desbloqueado"); })
+        .catch(error => { console.error("Error al desbloquear usuario:", error); });
+    }
+    
+    function blockUser(userId){
+      const blockedUntil = Date.now() + 7 * 24 * 60 * 60 * 1000;
+      firebase.database().ref('users/' + userId).update({ blocked: true, blockedUntil: blockedUntil })
+        .then(() => { alert("Usuario bloqueado"); })
+        .catch(error => { console.error("Error al bloquear usuario:", error); });
+    }
+    
+    /********** RESPUESTA (Reply Modal) **********/
+    function openReplyModal(targetUser, context){
+      replyTargetUser = targetUser;
+      replyContext = context;
+      document.getElementById('replyModal').style.display = "flex";
+    }
+    function closeReplyModal(){
+      document.getElementById('replyModal').style.display = "none";
+      document.getElementById('replyMessage').value = "";
+      replyTargetUser = null;
+      replyContext = "";
+    }
+    function sendReply(){
+      const message = document.getElementById('replyMessage').value;
+      if(!replyTargetUser || message.trim() === ""){
+        alert("Escribe un mensaje para enviar.");
+        return;
+      }
+      addNotification(replyTargetUser, message);
+      alert("Respuesta enviada.");
+      closeReplyModal();
+    }
+    
+    function addNotification(userId, message) {
+      const notificationsRef = firebase.database().ref('notifications/' + userId);
+      const newNotificationRef = notificationsRef.push();
+      newNotificationRef.set({
+        message: message,
+        timestamp: Date.now(),
+        read: false
+      });
+    }
+    
+    /********** VERIFICACIÓN DE USUARIOS **********/
+    function verifyUser(){
+      const uid = document.getElementById('verifyUserId').value.trim();
+      if(uid === ""){
+        alert("Ingrese el ID del usuario a verificar.");
+        return;
+      }
+      firebase.database().ref('users/' + uid).update({ isVerified: true })
+        .then(() => { 
+          alert("Usuario marcado como verificado."); 
+          document.getElementById('verifyUserId').value = "";
+        })
+        .catch(error => { console.error("Error al verificar usuario:", error); });
+    }
+    
+    function loadVerifiedUsers(){
+      const usersRef = firebase.database().ref('users');
+      usersRef.orderByChild('isVerified').equalTo(true).on('value', snapshot => {
+        const verifiedList = document.getElementById('verifiedUsersList');
+        verifiedList.innerHTML = "<h3 class='text-lg font-bold mb-2'>Usuarios Verificados</h3>";
+        snapshot.forEach(child => {
+          const user = child.val();
+          const div = document.createElement('div');
+          div.className = "p-2 bg-green-100 rounded";
+          div.innerHTML = `<p><strong>${user.username}</strong> (${child.key})</p>`;
+          verifiedList.appendChild(div);
+        });
+      });
+    }
+    
+    /********** HISTORIAS DE AUTORES **********/
+    function loadAuthorsForStories(){
+      const storiesRef = firebase.database().ref('stories');
+      storiesRef.on('value', snapshot => {
+        const authorsList = document.getElementById('authorsList');
+        let authors = {};
+        snapshot.forEach(child => {
+          const story = child.val();
+          if(story.userId){
+            authors[story.userId] = story.username || "Sin nombre";
+          }
+        });
+        authorsList.innerHTML = "";
+        for(const uid in authors){
+          const div = document.createElement('div');
+          div.className = "card flex justify-between items-center";
+          div.innerHTML = `<span><strong>${authors[uid]}</strong> (${uid})</span>
+                           <button class="bg-blue-500 text-white px-3 py-1 rounded flex items-center" onclick="manageStories('${uid}', '${authors[uid]}')">
+                             <i class="fas fa-book mr-1"></i> Ver Historias
+                           </button>`;
+          authorsList.appendChild(div);
+        }
+      });
+    }
+    
+    function manageStories(userId, username){
+      currentAuthorForStories = userId;
+      document.getElementById('modalAuthorName').innerText = "Historias de " + username;
+      showSpinner();
+      firebase.database().ref('stories').orderByChild('userId').equalTo(userId).once('value')
+        .then(snapshot => {
+          const modalList = document.getElementById('authorStoriesList');
+          modalList.innerHTML = "";
+          snapshot.forEach(child => {
+            const story = child.val();
+            const storyDiv = document.createElement('div');
+            storyDiv.className = "card flex justify-between items-center";
+            storyDiv.innerHTML = `<div>
+                                    <p class="font-bold">${story.title}</p>
+                                    <p class="text-sm">${new Date(story.createdAt).toLocaleString()}</p>
+                                  </div>
+                                  <button class="bg-red-500 text-white px-3 py-1 rounded flex items-center" onclick="deleteStory('${child.key}')">
+                                    <i class="fas fa-trash-alt mr-1"></i> Eliminar
+                                  </button>`;
+            modalList.appendChild(storyDiv);
+          });
+          hideSpinner();
+          document.getElementById('storiesModal').classList.remove('hidden');
+        })
+        .catch(error => {
+          console.error("Error al cargar historias:", error);
+          hideSpinner();
+        });
+    }
+    
+    function closeStoriesModal(){
+      document.getElementById('storiesModal').classList.add('hidden');
+    }
+    
+    function deleteStory(storyId){
+      if(confirm("¿Seguro que deseas eliminar esta historia?")){
+        firebase.database().ref('stories/' + storyId).remove()
+          .then(() => { alert("Historia eliminada."); })
+          .catch(error => { console.error("Error al eliminar historia:", error); });
+      }
+    }
+    
+    /********** SPINNER **********/
+    function showSpinner(){
+      document.getElementById('loadingSpinner').style.display = "flex";
+    }
+    function hideSpinner(){
+      document.getElementById('loadingSpinner').style.display = "none";
+    }
+  </script>
+</body>
+</html>
+<!-- partial -->
+  
+</body>
+</html>
