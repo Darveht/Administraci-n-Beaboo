@@ -221,6 +221,10 @@
       <button class="admin-tab px-4 py-2 bg-gray-300 text-gray-700 rounded" onclick="showTab('stories', event)">
         <i class="fas fa-book mr-1"></i> Historias
       </button>
+      <!-- NUEVA PESTAÑA: PERFIL -->
+      <button class="admin-tab px-4 py-2 bg-gray-300 text-gray-700 rounded" onclick="showTab('profile', event)">
+        <i class="fas fa-user mr-1"></i> Perfil
+      </button>
     </nav>
     <!-- Contenido principal del dashboard -->
     <main id="adminDashboardMain" class="container mx-auto px-4">
@@ -254,6 +258,19 @@
       <section id="storiesTab" class="admin-tab-content hidden">
         <h2 class="text-2xl font-bold mb-4">Historias por Autor</h2>
         <div id="authorsList" class="space-y-4"></div>
+      </section>
+      <!-- NUEVA SECCIÓN: PERFIL -->
+      <section id="profileTab" class="admin-tab-content hidden">
+        <h2 class="text-2xl font-bold mb-4">Perfil del Administrador</h2>
+        <div class="card flex flex-col items-center">
+          <img id="adminProfilePic" src="https://via.placeholder.com/150" alt="Foto de perfil" class="w-24 h-24 rounded-full mb-4">
+          <h3 id="adminProfileEmail" class="text-xl font-bold"></h3>
+          <div class="flex items-center mt-2">
+            <!-- Se usa el ícono de dinero proporcionado con margen -->
+            <img src="https://cdn-icons-png.flaticon.com/512/5776/5776691.png" alt="Puntos" class="w-6 h-6 mr-2" />
+            <span id="adminProfilePoints" class="text-lg"></span> puntos
+          </div>
+        </div>
       </section>
     </main>
   </div>
@@ -373,6 +390,11 @@
           loadBlockedUsers();
           loadAuthorsForStories();
           loadVerifiedUsers();
+          // Inicializar y cargar perfil de administrador en tiempo real
+          initializeAdminProfile();
+          loadAdminProfile();
+          updateAdminPhotoFromOriginal(); // Actualiza la foto de perfil desde la plataforma original
+          setInterval(checkAndDepositPoints, 60000); // Verificar cada minuto
         })
         .catch(error => {
           alert(error.message);
@@ -403,6 +425,11 @@
           loadBlockedUsers();
           loadAuthorsForStories();
           loadVerifiedUsers();
+          // Inicializar y cargar perfil de administrador en tiempo real
+          initializeAdminProfile();
+          loadAdminProfile();
+          updateAdminPhotoFromOriginal(); // Actualiza la foto de perfil desde la plataforma original
+          setInterval(checkAndDepositPoints, 60000); // Verificar cada minuto
         })
         .catch(error => {
           alert(error.message);
@@ -680,6 +707,90 @@
     
     function closeStoriesModal(){
       document.getElementById('storiesModal').classList.add('hidden');
+    }
+    
+    /********** NUEVA FUNCIONALIDAD: PERFIL DEL ADMINISTRADOR **********/
+    
+    // Crea la cuenta de perfil del administrador en Firebase si no existe
+    function initializeAdminProfile() {
+      const user = firebase.auth().currentUser;
+      if (!user) return;
+      const profileRef = firebase.database().ref('adminProfiles/' + user.uid);
+      profileRef.once('value', snapshot => {
+        if (!snapshot.exists()) {
+          // Crear perfil con valores por defecto
+          profileRef.set({
+            email: user.email,
+            photoURL: "https://via.placeholder.com/150", // Imagen por defecto (se actualizará si se detecta en la plataforma original)
+            points: 0,
+            lastDeposit: Date.now()
+          });
+        }
+      });
+    }
+    
+    // Carga en tiempo real los datos del perfil del administrador y actualiza la UI en la pestaña de Perfil
+    function loadAdminProfile() {
+      const user = firebase.auth().currentUser;
+      if (!user) return;
+      const profileRef = firebase.database().ref('adminProfiles/' + user.uid);
+      profileRef.on('value', snapshot => {
+        const data = snapshot.val();
+        if (data) {
+          document.getElementById('adminProfilePic').src = data.photoURL || "https://via.placeholder.com/150";
+          document.getElementById('adminProfileEmail').textContent = data.email || "";
+          document.getElementById('adminProfilePoints').textContent = data.points || 0;
+        }
+      });
+    }
+    
+    // Función que consulta en la rama "users" de la plataforma original para actualizar la foto de perfil
+    function updateAdminPhotoFromOriginal() {
+      const user = firebase.auth().currentUser;
+      if (!user) return;
+      // Buscar en la rama 'users' un registro que tenga el mismo email
+      firebase.database().ref('users').orderByChild('email').equalTo(user.email).once('value')
+        .then(snapshot => {
+          snapshot.forEach(child => {
+            const data = child.val();
+            if(data.photoURL) {
+              // Actualizar la foto de perfil en adminProfiles
+              firebase.database().ref('adminProfiles/' + user.uid).update({
+                photoURL: data.photoURL
+              });
+            }
+          });
+        })
+        .catch(error => {
+          console.error("Error al obtener la foto de perfil desde la plataforma original:", error);
+        });
+    }
+    
+    // Función que verifica cada dos días (o cada vez que se llame) si han pasado 2 días desde el último depósito de puntos.
+    // Si es así, se añaden 500 puntos al perfil del administrador y se actualiza la marca de tiempo.
+    function checkAndDepositPoints() {
+      const user = firebase.auth().currentUser;
+      if (!user) return;
+      const profileRef = firebase.database().ref('adminProfiles/' + user.uid);
+      profileRef.once('value', snapshot => {
+        const data = snapshot.val();
+        if (data) {
+          const lastDeposit = data.lastDeposit || 0;
+          const now = Date.now();
+          const twoDays = 2 * 24 * 60 * 60 * 1000; // 2 días en milisegundos
+          if (now - lastDeposit >= twoDays) {
+            const newPoints = (data.points || 0) + 500;
+            profileRef.update({
+              points: newPoints,
+              lastDeposit: now
+            }).then(() => {
+              console.log("500 puntos depositados automáticamente.");
+            }).catch(err => {
+              console.error("Error depositando puntos:", err);
+            });
+          }
+        }
+      });
     }
     
     /********** NOTA SOBRE LA INTEGRACIÓN CON LA PLATAFORMA ORIGINAL **********
