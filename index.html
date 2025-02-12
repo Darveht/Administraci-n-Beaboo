@@ -245,8 +245,8 @@
         <div class="mb-4">
           <input type="text" id="verifyUserId" placeholder="Ingrese ID del usuario" class="w-full p-3 border rounded">
         </div>
-        <button onclick="verifyUser()" class="w-full bg-blue-500 text-white p-3 rounded flex items-center justify-center">
-          <i class="fas fa-check mr-2"></i> Marcar como Verificado
+        <button onclick="executeWithSpinner(function(){ verifyUser(); })" class="w-full bg-blue-500 text-white p-3 rounded flex items-center justify-center">
+          <i class="fas fa-check-circle mr-2"></i> Marcar como Verificado
         </button>
         <div id="verifiedUsersList" class="mt-6"></div>
       </section>
@@ -264,10 +264,10 @@
       <h2 class="text-xl font-bold mb-4">Enviar Respuesta</h2>
       <textarea id="replyMessage" placeholder="Escribe tu respuesta aquí..." class="w-full border p-2 rounded mb-4" rows="5"></textarea>
       <div class="flex justify-end">
-        <button onclick="closeReplyModal()" class="mr-4 bg-gray-500 text-white px-4 py-2 rounded flex items-center">
-          <i class="fas fa-times mr-1"></i> Cancelar
+        <button onclick="executeWithSpinner(function(){ closeReplyModal(); })" class="mr-4 bg-gray-500 text-white px-4 py-2 rounded flex items-center">
+          <i class="fas fa-times-circle mr-1"></i> Cancelar
         </button>
-        <button onclick="sendReply()" class="bg-[#58CC02] text-white px-4 py-2 rounded flex items-center">
+        <button onclick="executeWithSpinner(function(){ sendReply(); })" class="bg-[#58CC02] text-white px-4 py-2 rounded flex items-center">
           <i class="fas fa-paper-plane mr-1"></i> Enviar
         </button>
       </div>
@@ -279,7 +279,7 @@
     <div class="modal-content">
       <div class="flex justify-between items-center mb-4">
         <h2 id="modalAuthorName" class="text-2xl font-bold">Historias de [Autor]</h2>
-        <button onclick="closeStoriesModal()" class="text-gray-500 text-3xl">&times;</button>
+        <button onclick="executeWithSpinner(function(){ closeStoriesModal(); })" class="text-gray-500 text-3xl">&times;</button>
       </div>
       <!-- Aquí se listarán todas las historias del autor con sus datos -->
       <div id="authorStoriesList" class="space-y-4"></div>
@@ -300,8 +300,24 @@
     let replyContext = "";
     let currentAuthorForStories = null;
     
+    /********** FUNCIONES PARA ANIMAR ACCIONES (Spinner) **********/
+    function executeWithSpinner(action) {
+      showSpinner();
+      setTimeout(() => {
+        action();
+        hideSpinner();
+      }, 3000);
+    }
+    
+    function showSpinner(){
+      document.getElementById('loadingSpinner').style.display = "flex";
+    }
+    function hideSpinner(){
+      document.getElementById('loadingSpinner').style.display = "none";
+    }
+    
     /********** UTILIDADES DE ESTILO **********/
-    // Devuelve el icono de verificación si el email es glamworksapps@gmail.com
+    // Devuelve el ícono de verificación si el email es glamworksapps@gmail.com
     function getVerificationIcon(email) {
       return email === "glamworksapps@gmail.com" 
              ? ' <img src="https://cdn-icons-png.flaticon.com/512/845/845646.png" alt="Verificado" class="inline-block w-4 h-4 ml-1" />'
@@ -401,16 +417,14 @@
           const report = child.val();
           const reportDiv = document.createElement('div');
           reportDiv.className = "card";
-          // Si el motivo es "perfil_falso", se trata de un reporte de perfil.
-          // Se muestra el botón que llama a la función blockProfile,
-          // la cual actualizará el usuario en la BD (blocked: true).
+          // Si el reporte es de perfil (no tiene storyId o tiene report.reason "perfil_falso")
           let blockButton = "";
-          if(report.reason === "perfil_falso"){
-            blockButton = `<button class="bg-gray-700 text-white px-3 py-1 rounded flex items-center" onclick="blockProfile('${report.reportedUser}')">
+          if(report.reason === "perfil_falso" || (!report.storyId && report.reportedUser)){
+            blockButton = `<button class="bg-gray-700 text-white px-3 py-1 rounded flex items-center" onclick="executeWithSpinner(function(){ blockProfile('${report.reportedUser}'); })">
                              <i class="fas fa-ban mr-1"></i> Bloquear Perfil
                            </button>`;
           } else if(report.storyId){ 
-            blockButton = `<button class="bg-gray-700 text-white px-3 py-1 rounded flex items-center" onclick="blockStory('${report.storyId}')">
+            blockButton = `<button class="bg-gray-700 text-white px-3 py-1 rounded flex items-center" onclick="executeWithSpinner(function(){ blockStory('${report.storyId}'); })">
                              <i class="fas fa-ban mr-1"></i> Bloquear Historia
                            </button>`;
           }
@@ -422,14 +436,14 @@
             <p><strong>Fecha:</strong> ${new Date(report.timestamp).toLocaleString()}</p>
             <p><strong>Estado:</strong> ${report.status}</p>
             <div class="flex flex-wrap gap-2 mt-2">
-              <button class="bg-blue-500 text-white px-3 py-1 rounded flex items-center" onclick="openReplyModal('${report.reporter}', 'report')">
+              <button class="bg-blue-500 text-white px-3 py-1 rounded flex items-center" onclick="executeWithSpinner(function(){ openReplyModal('${report.reporter}', 'report'); })">
                 <i class="fas fa-reply mr-1"></i> Responder
               </button>
-              <button class="bg-green-500 text-white px-3 py-1 rounded flex items-center" onclick="updateReportStatus('${child.key}', 'accepted')">
-                <i class="fas fa-check mr-1"></i> Aceptar
+              <button class="bg-green-500 text-white px-3 py-1 rounded flex items-center" onclick="executeWithSpinner(function(){ updateReportStatus('${child.key}', 'accepted'); })">
+                <i class="fas fa-check-circle mr-1"></i> Aceptar
               </button>
-              <button class="bg-red-500 text-white px-3 py-1 rounded flex items-center" onclick="updateReportStatus('${child.key}', 'rejected')">
-                <i class="fas fa-times mr-1"></i> Rechazar
+              <button class="bg-red-500 text-white px-3 py-1 rounded flex items-center" onclick="executeWithSpinner(function(){ updateReportStatus('${child.key}', 'rejected'); })">
+                <i class="fas fa-times-circle mr-1"></i> Rechazar
               </button>
               ${blockButton}
             </div>
@@ -462,11 +476,11 @@
             <p><strong>Fecha:</strong> ${new Date(support.timestamp).toLocaleString()}</p>
             <p><strong>Estado:</strong> ${support.status}</p>
             <div class="flex flex-wrap gap-2 mt-2">
-              <button class="bg-blue-500 text-white px-3 py-1 rounded flex items-center" onclick="openReplyModal('${support.userId}', 'support')">
+              <button class="bg-blue-500 text-white px-3 py-1 rounded flex items-center" onclick="executeWithSpinner(function(){ openReplyModal('${support.userId}', 'support'); })">
                 <i class="fas fa-reply mr-1"></i> Responder
               </button>
-              <button class="bg-green-500 text-white px-3 py-1 rounded flex items-center" onclick="updateSupportStatus('${child.key}', 'resolved')">
-                <i class="fas fa-check mr-1"></i> Resuelto
+              <button class="bg-green-500 text-white px-3 py-1 rounded flex items-center" onclick="executeWithSpinner(function(){ updateSupportStatus('${child.key}', 'resolved'); })">
+                <i class="fas fa-heart mr-1"></i> Resuelto
               </button>
             </div>
           `;
@@ -484,7 +498,7 @@
     /********** USUARIOS BLOQUEADOS **********/
     function loadBlockedUsers(){
       const usersRef = firebase.database().ref('users');
-      // Se recuperan sólo los usuarios que tengan blocked: true
+      // Se recuperan solo los usuarios con blocked: true
       usersRef.orderByChild('blocked').equalTo(true).on('value', snapshot => {
         const blockedList = document.getElementById('blockedUsersList');
         blockedList.innerHTML = "";
@@ -495,7 +509,7 @@
           userDiv.innerHTML = `
             <p><strong>Usuario:</strong> ${user.username} (${child.key})</p>
             <p><strong>Bloqueado hasta:</strong> ${new Date(user.blockedUntil).toLocaleString()}</p>
-            <button class="bg-green-500 text-white px-3 py-1 rounded flex items-center" onclick="unblockUser('${child.key}')">
+            <button class="bg-green-500 text-white px-3 py-1 rounded flex items-center" onclick="executeWithSpinner(function(){ unblockUser('${child.key}'); })">
               <i class="fas fa-unlock mr-1"></i> Desbloquear
             </button>
           `;
@@ -526,7 +540,7 @@
     // Función para bloquear un perfil (reportado)
     function blockProfile(userId){
       if(confirm("¿Seguro que deseas bloquear este perfil? El usuario quedará bloqueado en tiempo real.")){
-        // Se bloquea al usuario por 7 días (puedes ajustar la duración)
+        // Bloqueo por 7 días (ajustable)
         const blockedUntil = Date.now() + 7 * 24 * 60 * 60 * 1000;
         firebase.database().ref('users/' + userId).update({ 
           blocked: true,
@@ -617,7 +631,7 @@
           const div = document.createElement('div');
           div.className = "card flex justify-between items-center";
           div.innerHTML = `<span><strong>${authors[uid]}</strong> (${uid})</span>
-                           <button class="bg-blue-500 text-white px-3 py-1 rounded flex items-center" onclick="manageStories('${uid}', '${authors[uid]}')">
+                           <button class="bg-blue-500 text-white px-3 py-1 rounded flex items-center" onclick="executeWithSpinner(function(){ manageStories('${uid}', '${authors[uid]}'); })">
                              <i class="fas fa-book mr-1"></i> Ver Historias
                            </button>`;
           authorsList.appendChild(div);
@@ -642,7 +656,7 @@
                                     <p class="text-sm">${new Date(story.createdAt).toLocaleString()}</p>
                                     <p class="text-sm">${story.synopsis || ""}</p>
                                   </div>
-                                  <button class="bg-red-500 text-white px-3 py-1 rounded flex items-center" onclick="blockStory('${child.key}')">
+                                  <button class="bg-red-500 text-white px-3 py-1 rounded flex items-center" onclick="executeWithSpinner(function(){ blockStory('${child.key}'); })">
                                     <i class="fas fa-ban mr-1"></i> Bloquear
                                   </button>`;
             modalList.appendChild(storyDiv);
@@ -660,36 +674,25 @@
       document.getElementById('storiesModal').classList.add('hidden');
     }
     
-    /********** SPINNER **********/
-    function showSpinner(){
-      document.getElementById('loadingSpinner').style.display = "flex";
-    }
-    function hideSpinner(){
-      document.getElementById('loadingSpinner').style.display = "none";
-    }
-    
     /********** NOTA SOBRE LA INTEGRACIÓN CON LA PLATAFORMA ORIGINAL **********
-     * Para que un usuario bloqueado no se muestre en la plataforma original (ni su nombre, ni sus historias, etc.),
-     * deberás modificar las consultas en esa parte de tu aplicación.
-     *
-     * Por ejemplo, si cargas usuarios en la plataforma original:
+     * Para que un usuario bloqueado (blocked: true) no se muestre en la plataforma original (ni su nombre, ni sus historias, etc.),
+     * deberás modificar las consultas en esa parte de tu aplicación. Por ejemplo:
      *
      *   firebase.database().ref('users')
      *     .orderByChild('blocked').equalTo(false)
      *     .on('value', snapshot => {
-     *       // Aquí se cargarán solo los usuarios que NO estén bloqueados.
+     *       // Se mostrarán solo los usuarios no bloqueados.
      *     });
      *
-     * Y, de igual forma, para mostrar las historias:
+     * De igual forma, para las historias:
      *
      *   firebase.database().ref('stories')
      *     .orderByChild('blocked').equalTo(false)
      *     .on('value', snapshot => {
-     *       // Se muestran únicamente las historias que NO hayan sido bloqueadas.
+     *       // Se mostrarán solo las historias que no hayan sido bloqueadas.
      *     });
      *
-     * De esta manera, cuando el administrador use la función blockProfile (la cual establece blocked: true),
-     * el perfil del usuario quedará bloqueado y en la plataforma original no se mostrará.
+     * Así, cuando el administrador use la función blockProfile, el usuario quedará bloqueado y no aparecerá en la parte pública.
      ****************************************************************************************/
   </script>
 </body>
