@@ -1,14 +1,4 @@
 <!DOCTYPE html>
-<html lang="en" >
-<head>
-  <meta charset="UTF-8">
-  <title>Untitled</title>
-  
-
-</head>
-<body>
-<!-- partial:index.partial.html -->
-<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
@@ -27,7 +17,7 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
   <script>
-    // Configuración de Firebase (la misma que en tu código original)
+    // Configuración de Firebase (ajusta según tu proyecto)
     const firebaseConfig = {
       apiKey: "AIzaSyA1UV_OTjRjq22RRB1REnhWzMLZQNCB6wA",
       authDomain: "love-alarm-5c538.firebaseapp.com",
@@ -67,7 +57,7 @@
     }
     /* Contenedor principal para el dashboard */
     #adminDashboardMain {
-      margin-top: 120px; /* espacio para header y tabs */
+      margin-top: 120px; /* espacio para header y pestañas */
     }
     /* Tarjetas (cards) para cada sección */
     .card {
@@ -77,7 +67,7 @@
       box-shadow: 0 2px 4px rgba(0,0,0,0.05);
       margin-bottom: 1rem;
     }
-    /* Spinner estilo TikTok: dos bolitas animadas */
+    /* Spinner estilo TikTok */
     .spinner-tiktok {
       display: inline-block;
       position: relative;
@@ -135,33 +125,79 @@
       max-height: 90vh;
       overflow-y: auto;
     }
+    /* Estilo Duolingo para el modal de registro/inicio de sesión */
+    .duolingo-modal {
+      background: linear-gradient(135deg, #4CAF50, #8BC34A);
+      color: white;
+      border-radius: 1rem;
+      padding: 2rem;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    .duolingo-modal input,
+    .duolingo-modal button {
+      border: none;
+      padding: 0.75rem;
+      border-radius: 9999px;
+      margin-top: 1rem;
+    }
+    .duolingo-modal input {
+      width: 100%;
+    }
+    .duolingo-modal button {
+      background-color: white;
+      color: #4CAF50;
+      font-weight: bold;
+      width: 100%;
+    }
+    /* Mensaje para historias bloqueadas en la plataforma original */
+    .blocked-story {
+      background-color: #f2f2f2;
+      color: #888;
+      padding: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      text-align: center;
+      font-size: 0.9rem;
+      font-weight: bold;
+    }
+    /* Para que los modales del dashboard se muestren en primer plano */
+    #adminDashboard, #adminAuthModal { z-index: 50; }
+    /* Para que el contenido se actualice en tiempo real, se usan los listeners de Firebase (no hay estilos especiales aquí) */
   </style>
 </head>
 <body class="bg-gray-100">
-  <!-- LOGIN DEL ADMIN (Pantalla completa) -->
-  <div id="admin-login" class="flex items-center justify-center min-h-screen">
-    <div class="bg-white p-8 rounded shadow-md w-full max-w-md">
-      <h2 class="text-2xl font-bold mb-4 text-center">Panel de Administración</h2>
-      <form id="adminLoginForm" class="space-y-4">
-        <div class="relative">
-          <i class="fas fa-envelope absolute left-3 top-3 text-gray-400"></i>
-          <input type="email" id="adminEmail" placeholder="Correo electrónico" class="w-full p-3 pl-10 border rounded" required>
-        </div>
-        <div class="relative">
-          <i class="fas fa-lock absolute left-3 top-3 text-gray-400"></i>
-          <input type="password" id="adminPassword" placeholder="Contraseña" class="w-full p-3 pl-10 border rounded" required>
-        </div>
-        <button type="submit" class="w-full bg-[#58CC02] text-white p-3 rounded flex items-center justify-center">
-          <i class="fas fa-sign-in-alt mr-2"></i> Iniciar Sesión
-        </button>
+  <!-- PANTALLA DE INTRO Y REGISTRO/LOGIN -->
+  <div id="adminIntro" class="min-h-screen flex flex-col items-center justify-center relative">
+    <!-- Imagen de fondo similar a tu intro original -->
+    <img src="https://ideogram.ai/assets/image/lossless/response/Mj2UkJSlRUi5-nusIdo7CA" alt="Intro" class="absolute inset-0 w-full h-full object-cover opacity-50">
+    <div class="duolingo-modal max-w-md mx-auto z-10">
+      <h2 class="text-3xl font-bold mb-4 text-center">Bienvenido al Panel de Administración</h2>
+      <!-- Formulario de registro (se puede alternar con el de inicio de sesión) -->
+      <form id="adminRegisterForm" class="space-y-4">
+        <input type="email" id="adminRegEmail" placeholder="Correo electrónico" required>
+        <input type="password" id="adminRegPassword" placeholder="Contraseña" required>
+        <button type="submit">Registrarse</button>
       </form>
-      <div id="adminError" class="mt-4 text-red-500 hidden"></div>
+      <p class="mt-4 text-center">¿Ya tienes cuenta? <a href="#" onclick="toggleAdminAuth()" class="underline">Inicia sesión</a></p>
+    </div>
+  </div>
+  
+  <!-- Modal de inicio de sesión (Duolingo style) -->
+  <div id="adminAuthModal" class="fixed inset-0 flex items-center justify-center z-50 hidden">
+    <div class="duolingo-modal max-w-md mx-auto">
+      <h2 class="text-3xl font-bold mb-4 text-center">Iniciar Sesión</h2>
+      <form id="adminAuthForm" class="space-y-4">
+        <input type="email" id="adminAuthEmail" placeholder="Correo electrónico" required>
+        <input type="password" id="adminAuthPassword" placeholder="Contraseña" required>
+        <button type="submit">Iniciar Sesión</button>
+      </form>
+      <p class="mt-4 text-center">¿No tienes cuenta? <a href="#" onclick="toggleAdminAuth()" class="underline">Regístrate</a></p>
     </div>
   </div>
   
   <!-- DASHBOARD DEL ADMIN (se muestra después del login) -->
   <div id="adminDashboard" class="hidden">
-    <!-- CABECERA FIJA (ya se ve en el login; en el dashboard se usa la misma cabecera) -->
+    <!-- CABECERA FIJA -->
     <header class="flex items-center justify-between">
       <h1 class="text-2xl font-bold">Panel de Administración</h1>
       <button onclick="adminSignOut()" class="bg-red-500 text-white px-3 py-2 rounded flex items-center">
@@ -245,7 +281,8 @@
         <h2 id="modalAuthorName" class="text-2xl font-bold">Historias de [Autor]</h2>
         <button onclick="closeStoriesModal()" class="text-gray-500 text-3xl">&times;</button>
       </div>
-      <div id="authorStoriesList" class="grid grid-cols-1 gap-4"></div>
+      <!-- Aquí se listarán todas las historias del autor con sus datos -->
+      <div id="authorStoriesList" class="space-y-4"></div>
     </div>
   </div>
   
@@ -258,46 +295,33 @@
   </div>
   
   <script>
-    // Variables globales para el reply modal y administración de historias
+    /********** VARIABLES GLOBALES **********/
     let replyTargetUser = null;
     let replyContext = "";
     let currentAuthorForStories = null;
     
-    // ADMIN LOGIN
-    document.getElementById('adminLoginForm').addEventListener('submit', function(e){
-      e.preventDefault();
-      const email = document.getElementById('adminEmail').value;
-      const password = document.getElementById('adminPassword').value;
-      firebase.auth().signInWithEmailAndPassword(email, password)
-        .then(userCredential => {
-          const user = userCredential.user;
-          if(user.email !== "darelvega6@icloud.com"){
-            document.getElementById('adminError').innerText = "Acceso denegado. No eres administrador.";
-            document.getElementById('adminError').classList.remove('hidden');
-            firebase.auth().signOut();
-            return;
-          }
-          document.getElementById('admin-login').classList.add('hidden');
-          document.getElementById('adminDashboard').classList.remove('hidden');
-          loadReports();
-          loadSupportRequests();
-          loadBlockedUsers();
-          loadAuthorsForStories();
-          loadVerifiedUsers();
-        })
-        .catch(error => {
-          document.getElementById('adminError').innerText = error.message;
-          document.getElementById('adminError').classList.remove('hidden');
-        });
-    });
-    
-    function adminSignOut(){
-      firebase.auth().signOut().then(() => {
-        location.reload();
-      });
+    /********** UTILIDADES DE ESTILO **********/
+    // Devuelve el icono de verificación si el email es glamworksapps@gmail.com
+    function getVerificationIcon(email) {
+      return email === "glamworksapps@gmail.com" 
+             ? ' <img src="https://cdn-icons-png.flaticon.com/512/845/845646.png" alt="Verificado" class="inline-block w-4 h-4 ml-1" />'
+             : "";
     }
     
-    // Cambiar de pestaña
+    // Alternar entre registro e inicio de sesión en la sección de intro
+    function toggleAdminAuth(){
+      const intro = document.getElementById('adminIntro');
+      const authModal = document.getElementById('adminAuthModal');
+      if(intro.classList.contains('hidden')){
+        intro.classList.remove('hidden');
+        authModal.classList.add('hidden');
+      } else {
+        intro.classList.add('hidden');
+        authModal.classList.remove('hidden');
+      }
+    }
+    
+    // Mostrar/ocultar pestañas del dashboard
     function showTab(tabName, event){
       document.querySelectorAll('.admin-tab-content').forEach(tab => tab.classList.add('hidden'));
       document.getElementById(tabName + "Tab").classList.remove('hidden');
@@ -306,6 +330,63 @@
         button.classList.add('bg-gray-300', 'text-gray-700');
       });
       event.target.classList.add('bg-[#58CC02]', 'text-white');
+    }
+    
+    /********** ADMIN LOGIN/REGISTRO **********/
+    // Registro del administrador
+    document.getElementById('adminRegisterForm').addEventListener('submit', function(e){
+      e.preventDefault();
+      const email = document.getElementById('adminRegEmail').value;
+      const password = document.getElementById('adminRegPassword').value;
+      firebase.auth().createUserWithEmailAndPassword(email, password)
+        .then(userCredential => {
+          if(userCredential.user.email !== "darelvega6@icloud.com"){
+            alert("Acceso denegado. Solo el administrador autorizado puede registrarse.");
+            firebase.auth().signOut();
+            return;
+          }
+          document.getElementById('adminIntro').classList.add('hidden');
+          document.getElementById('adminDashboard').classList.remove('hidden');
+          loadReports();
+          loadSupportRequests();
+          loadBlockedUsers();
+          loadAuthorsForStories();
+          loadVerifiedUsers();
+        })
+        .catch(error => {
+          alert(error.message);
+        });
+    });
+    
+    // Inicio de sesión del administrador
+    document.getElementById('adminAuthForm').addEventListener('submit', function(e){
+      e.preventDefault();
+      const email = document.getElementById('adminAuthEmail').value;
+      const password = document.getElementById('adminAuthPassword').value;
+      firebase.auth().signInWithEmailAndPassword(email, password)
+        .then(userCredential => {
+          if(userCredential.user.email !== "darelvega6@icloud.com"){
+            alert("Acceso denegado. No eres administrador.");
+            firebase.auth().signOut();
+            return;
+          }
+          document.getElementById('adminAuthModal').classList.add('hidden');
+          document.getElementById('adminDashboard').classList.remove('hidden');
+          loadReports();
+          loadSupportRequests();
+          loadBlockedUsers();
+          loadAuthorsForStories();
+          loadVerifiedUsers();
+        })
+        .catch(error => {
+          alert(error.message);
+        });
+    });
+    
+    function adminSignOut(){
+      firebase.auth().signOut().then(() => {
+        location.reload();
+      });
     }
     
     /********** REPORTES **********/
@@ -318,6 +399,18 @@
           const report = child.val();
           const reportDiv = document.createElement('div');
           reportDiv.className = "card";
+          // Según el motivo, si es "perfil_falso" se trata de un reporte de perfil;
+          // de lo contrario, asumimos que el reporte es de una historia (debe incluir el campo storyId)
+          let blockButton = "";
+          if(report.reason === "perfil_falso"){
+            blockButton = `<button class="bg-gray-700 text-white px-3 py-1 rounded flex items-center" onclick="blockProfile('${report.reportedUser}')">
+                             <i class="fas fa-ban mr-1"></i> Bloquear Perfil
+                           </button>`;
+          } else if(report.storyId){ 
+            blockButton = `<button class="bg-gray-700 text-white px-3 py-1 rounded flex items-center" onclick="blockStory('${report.storyId}')">
+                             <i class="fas fa-ban mr-1"></i> Bloquear Historia
+                           </button>`;
+          }
           reportDiv.innerHTML = `
             <p><strong>Reportado:</strong> ${report.reportedName} <span class="text-sm">(${report.reportedUser})</span></p>
             <p><strong>Reportado por:</strong> ${report.reporterName}</p>
@@ -335,9 +428,7 @@
               <button class="bg-red-500 text-white px-3 py-1 rounded flex items-center" onclick="updateReportStatus('${child.key}', 'rejected')">
                 <i class="fas fa-times mr-1"></i> Rechazar
               </button>
-              <button class="bg-gray-700 text-white px-3 py-1 rounded flex items-center" onclick="blockUser('${report.reportedUser}')">
-                <i class="fas fa-ban mr-1"></i> Bloquear
-              </button>
+              ${blockButton}
             </div>
           `;
           reportsList.appendChild(reportDiv);
@@ -415,11 +506,31 @@
         .catch(error => { console.error("Error al desbloquear usuario:", error); });
     }
     
-    function blockUser(userId){
-      const blockedUntil = Date.now() + 7 * 24 * 60 * 60 * 1000;
-      firebase.database().ref('users/' + userId).update({ blocked: true, blockedUntil: blockedUntil })
-        .then(() => { alert("Usuario bloqueado"); })
-        .catch(error => { console.error("Error al bloquear usuario:", error); });
+    /********** BLOQUEAR HISTORIAS Y PERFILES **********/
+    // Función para bloquear una historia (desactivarla)
+    function blockStory(storyId){
+      if(confirm("¿Seguro que deseas bloquear esta historia? Se desactivará en la plataforma.")){
+        firebase.database().ref('stories/' + storyId).update({ 
+          blocked: true,
+          blockedMessage: "BeaBoo ha bloqueado esta historia por infringir las normas de la comunidad"
+        })
+          .then(() => { alert("Historia bloqueada."); })
+          .catch(error => { console.error("Error al bloquear la historia:", error); });
+      }
+    }
+    
+    // Función para bloquear un perfil (reportado)
+    function blockProfile(userId){
+      if(confirm("¿Seguro que deseas bloquear este perfil? El usuario quedará bloqueado en tiempo real.")){
+        // Bloqueamos al usuario por 7 días (por ejemplo)
+        const blockedUntil = Date.now() + 7 * 24 * 60 * 60 * 1000;
+        firebase.database().ref('users/' + userId).update({ 
+          blocked: true,
+          blockedUntil: blockedUntil
+        })
+          .then(() => { alert("Perfil bloqueado."); })
+          .catch(error => { console.error("Error al bloquear el perfil:", error); });
+      }
     }
     
     /********** RESPUESTA (Reply Modal) **********/
@@ -525,9 +636,10 @@
             storyDiv.innerHTML = `<div>
                                     <p class="font-bold">${story.title}</p>
                                     <p class="text-sm">${new Date(story.createdAt).toLocaleString()}</p>
+                                    <p class="text-sm">${story.synopsis || ""}</p>
                                   </div>
-                                  <button class="bg-red-500 text-white px-3 py-1 rounded flex items-center" onclick="deleteStory('${child.key}')">
-                                    <i class="fas fa-trash-alt mr-1"></i> Eliminar
+                                  <button class="bg-red-500 text-white px-3 py-1 rounded flex items-center" onclick="blockStory('${child.key}')">
+                                    <i class="fas fa-ban mr-1"></i> Bloquear
                                   </button>`;
             modalList.appendChild(storyDiv);
           });
@@ -544,14 +656,6 @@
       document.getElementById('storiesModal').classList.add('hidden');
     }
     
-    function deleteStory(storyId){
-      if(confirm("¿Seguro que deseas eliminar esta historia?")){
-        firebase.database().ref('stories/' + storyId).remove()
-          .then(() => { alert("Historia eliminada."); })
-          .catch(error => { console.error("Error al eliminar historia:", error); });
-      }
-    }
-    
     /********** SPINNER **********/
     function showSpinner(){
       document.getElementById('loadingSpinner').style.display = "flex";
@@ -560,9 +664,5 @@
       document.getElementById('loadingSpinner').style.display = "none";
     }
   </script>
-</body>
-</html>
-<!-- partial -->
-  
 </body>
 </html>
