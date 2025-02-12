@@ -356,8 +356,12 @@
       const password = document.getElementById('adminRegPassword').value;
       firebase.auth().createUserWithEmailAndPassword(email, password)
         .then(userCredential => {
-          // Permitir acceso solo a "darelvega6@icloud.com" y "ponsy75@yahoo.com"
-          if(userCredential.user.email !== "darelvega6@icloud.com" && userCredential.user.email !== "ponsy75@yahoo.com"){
+          // Permitir acceso solo a "darelvega6@icloud.com", "ponsy75@yahoo.com" y "donovanyaztel1863@gmail.com"
+          if(
+            userCredential.user.email !== "darelvega6@icloud.com" &&
+            userCredential.user.email !== "ponsy75@yahoo.com" &&
+            userCredential.user.email !== "donovanyaztel1863@gmail.com"
+          ){
             alert("Acceso denegado. Solo los administradores autorizados pueden registrarse.");
             firebase.auth().signOut();
             return;
@@ -382,8 +386,12 @@
       const password = document.getElementById('adminAuthPassword').value;
       firebase.auth().signInWithEmailAndPassword(email, password)
         .then(userCredential => {
-          // Permitir acceso solo a "darelvega6@icloud.com" y "ponsy75@yahoo.com"
-          if(userCredential.user.email !== "darelvega6@icloud.com" && userCredential.user.email !== "ponsy75@yahoo.com"){
+          // Permitir acceso solo a "darelvega6@icloud.com", "ponsy75@yahoo.com" y "donovanyaztel1863@gmail.com"
+          if(
+            userCredential.user.email !== "darelvega6@icloud.com" &&
+            userCredential.user.email !== "ponsy75@yahoo.com" &&
+            userCredential.user.email !== "donovanyaztel1863@gmail.com"
+          ){
             alert("Acceso denegado. No eres administrador.");
             firebase.auth().signOut();
             return;
