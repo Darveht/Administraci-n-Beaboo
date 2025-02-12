@@ -162,7 +162,7 @@
     }
     /* Para que los modales del dashboard se muestren en primer plano */
     #adminDashboard, #adminAuthModal { z-index: 50; }
-    /* Para que el contenido se actualice en tiempo real, se usan los listeners de Firebase (no hay estilos especiales aquí) */
+    /* Nota: Para que el contenido se actualice en tiempo real se usan los listeners de Firebase (sin estilos especiales aquí) */
   </style>
 </head>
 <body class="bg-gray-100">
@@ -340,7 +340,7 @@
       const password = document.getElementById('adminRegPassword').value;
       firebase.auth().createUserWithEmailAndPassword(email, password)
         .then(userCredential => {
-          // Modificación para permitir acceso a "darelvega6@icloud.com" y "ponsy75@yahoo.com"
+          // Permitir acceso solo a "darelvega6@icloud.com" y "ponsy75@yahoo.com"
           if(userCredential.user.email !== "darelvega6@icloud.com" && userCredential.user.email !== "ponsy75@yahoo.com"){
             alert("Acceso denegado. Solo los administradores autorizados pueden registrarse.");
             firebase.auth().signOut();
@@ -366,7 +366,7 @@
       const password = document.getElementById('adminAuthPassword').value;
       firebase.auth().signInWithEmailAndPassword(email, password)
         .then(userCredential => {
-          // Modificación para permitir acceso a "darelvega6@icloud.com" y "ponsy75@yahoo.com"
+          // Permitir acceso solo a "darelvega6@icloud.com" y "ponsy75@yahoo.com"
           if(userCredential.user.email !== "darelvega6@icloud.com" && userCredential.user.email !== "ponsy75@yahoo.com"){
             alert("Acceso denegado. No eres administrador.");
             firebase.auth().signOut();
@@ -401,8 +401,9 @@
           const report = child.val();
           const reportDiv = document.createElement('div');
           reportDiv.className = "card";
-          // Según el motivo, si es "perfil_falso" se trata de un reporte de perfil;
-          // de lo contrario, asumimos que el reporte es de una historia (debe incluir el campo storyId)
+          // Si el motivo es "perfil_falso", se trata de un reporte de perfil.
+          // Se muestra el botón que llama a la función blockProfile,
+          // la cual actualizará el usuario en la BD (blocked: true).
           let blockButton = "";
           if(report.reason === "perfil_falso"){
             blockButton = `<button class="bg-gray-700 text-white px-3 py-1 rounded flex items-center" onclick="blockProfile('${report.reportedUser}')">
@@ -483,6 +484,7 @@
     /********** USUARIOS BLOQUEADOS **********/
     function loadBlockedUsers(){
       const usersRef = firebase.database().ref('users');
+      // Se recuperan sólo los usuarios que tengan blocked: true
       usersRef.orderByChild('blocked').equalTo(true).on('value', snapshot => {
         const blockedList = document.getElementById('blockedUsersList');
         blockedList.innerHTML = "";
@@ -524,7 +526,7 @@
     // Función para bloquear un perfil (reportado)
     function blockProfile(userId){
       if(confirm("¿Seguro que deseas bloquear este perfil? El usuario quedará bloqueado en tiempo real.")){
-        // Bloqueamos al usuario por 7 días (por ejemplo)
+        // Se bloquea al usuario por 7 días (puedes ajustar la duración)
         const blockedUntil = Date.now() + 7 * 24 * 60 * 60 * 1000;
         firebase.database().ref('users/' + userId).update({ 
           blocked: true,
@@ -665,6 +667,30 @@
     function hideSpinner(){
       document.getElementById('loadingSpinner').style.display = "none";
     }
+    
+    /********** NOTA SOBRE LA INTEGRACIÓN CON LA PLATAFORMA ORIGINAL **********
+     * Para que un usuario bloqueado no se muestre en la plataforma original (ni su nombre, ni sus historias, etc.),
+     * deberás modificar las consultas en esa parte de tu aplicación.
+     *
+     * Por ejemplo, si cargas usuarios en la plataforma original:
+     *
+     *   firebase.database().ref('users')
+     *     .orderByChild('blocked').equalTo(false)
+     *     .on('value', snapshot => {
+     *       // Aquí se cargarán solo los usuarios que NO estén bloqueados.
+     *     });
+     *
+     * Y, de igual forma, para mostrar las historias:
+     *
+     *   firebase.database().ref('stories')
+     *     .orderByChild('blocked').equalTo(false)
+     *     .on('value', snapshot => {
+     *       // Se muestran únicamente las historias que NO hayan sido bloqueadas.
+     *     });
+     *
+     * De esta manera, cuando el administrador use la función blockProfile (la cual establece blocked: true),
+     * el perfil del usuario quedará bloqueado y en la plataforma original no se mostrará.
+     ****************************************************************************************/
   </script>
 </body>
 </html>
