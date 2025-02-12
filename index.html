@@ -340,8 +340,9 @@
       const password = document.getElementById('adminRegPassword').value;
       firebase.auth().createUserWithEmailAndPassword(email, password)
         .then(userCredential => {
-          if(userCredential.user.email !== "darelvega6@icloud.com"){
-            alert("Acceso denegado. Solo el administrador autorizado puede registrarse.");
+          // Modificación para permitir acceso a "darelvega6@icloud.com" y "ponsy75@yahoo.com"
+          if(userCredential.user.email !== "darelvega6@icloud.com" && userCredential.user.email !== "ponsy75@yahoo.com"){
+            alert("Acceso denegado. Solo los administradores autorizados pueden registrarse.");
             firebase.auth().signOut();
             return;
           }
@@ -365,7 +366,8 @@
       const password = document.getElementById('adminAuthPassword').value;
       firebase.auth().signInWithEmailAndPassword(email, password)
         .then(userCredential => {
-          if(userCredential.user.email !== "darelvega6@icloud.com"){
+          // Modificación para permitir acceso a "darelvega6@icloud.com" y "ponsy75@yahoo.com"
+          if(userCredential.user.email !== "darelvega6@icloud.com" && userCredential.user.email !== "ponsy75@yahoo.com"){
             alert("Acceso denegado. No eres administrador.");
             firebase.auth().signOut();
             return;
