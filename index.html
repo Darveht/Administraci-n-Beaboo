@@ -16,10 +16,10 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
-  <!-- Firebase Storage (para subir archivos) -->
+  <!-- Firebase Storage -->
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-storage-compat.js"></script>
   <script>
-    // Configuración de Firebase (ajusta según tu proyecto)
+    // Configuración de Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyA1UV_OTjRjq22RRB1REnhWzMLZQNCB6wA",
       authDomain: "love-alarm-5c538.firebaseapp.com",
@@ -45,7 +45,7 @@
       right: 0;
       z-index: 50;
     }
-    /* Barra de pestañas (navegación horizontal) */
+    /* Barra de pestañas */
     nav.tabs {
       display: flex;
       overflow-x: auto;
@@ -57,11 +57,9 @@
       flex: none;
       white-space: nowrap;
     }
-    /* Contenedor principal para el dashboard */
-    #adminDashboardMain {
-      margin-top: 120px; /* espacio para header y pestañas */
-    }
-    /* Tarjetas (cards) */
+    /* Contenedor principal */
+    #adminDashboardMain { margin-top: 120px; }
+    /* Tarjetas */
     .card {
       background-color: #fff;
       padding: 1rem;
@@ -83,15 +81,13 @@
       border-radius: 50%;
       animation: spinner-tiktok 1s cubic-bezier(0, 0.2, 0.8, 1) infinite;
     }
-    .spinner-tiktok div:nth-child(2) {
-      animation-delay: -0.5s;
-    }
+    .spinner-tiktok div:nth-child(2) { animation-delay: -0.5s; }
     @keyframes spinner-tiktok {
       0% { transform: scale(0); }
       50% { transform: scale(1); opacity: 0.5; }
       100% { transform: scale(0); opacity: 0; }
     }
-    /* Modal de respuesta (Reply Modal) */
+    /* Modal de respuesta */
     #replyModal {
       position: fixed;
       inset: 0;
@@ -108,7 +104,7 @@
       width: 90%;
       max-width: 500px;
     }
-    /* Modal para administrar historias de un autor */
+    /* Modal para administrar historias */
     #storiesModal {
       position: fixed;
       inset: 0;
@@ -127,7 +123,7 @@
       max-height: 90vh;
       overflow-y: auto;
     }
-    /* Estilo Duolingo para modal de registro/inicio de sesión */
+    /* Modal de registro/login estilo Duolingo */
     .duolingo-modal {
       background: linear-gradient(135deg, #4CAF50, #8BC34A);
       color: white;
@@ -149,7 +145,7 @@
       font-weight: bold;
       width: 100%;
     }
-    /* Mensaje para historias bloqueadas */
+    /* Mensaje bloqueado */
     .blocked-story {
       background-color: #f2f2f2;
       color: #888;
@@ -160,7 +156,7 @@
       font-size: 0.9rem;
       font-weight: bold;
     }
-    /* Para que los modales del dashboard se muestren en primer plano */
+    /* Z-index para modales */
     #adminDashboard, #adminAuthModal { z-index: 50; }
     /* Sección de Regalos Live */
     nav.tabs button.giftsTabBtn {
@@ -175,7 +171,7 @@
       justify-content: space-between;
       align-items: center;
     }
-    /* Estilos para el Toast de confirmación */
+    /* Toast de confirmación */
     #toast {
       position: fixed;
       top: 1rem;
@@ -213,7 +209,7 @@
     </div>
   </div>
   
-  <!-- Modal de inicio de sesión (Duolingo style) -->
+  <!-- Modal de inicio de sesión -->
   <div id="adminAuthModal" class="fixed inset-0 flex items-center justify-center z-50 hidden">
     <div class="duolingo-modal max-w-md mx-auto">
       <h2 class="text-3xl font-bold mb-4 text-center">Iniciar Sesión</h2>
@@ -253,7 +249,7 @@
       <button class="admin-tab px-4 py-2 bg-gray-300 text-gray-700 rounded" onclick="showTab('stories', event)">
         <i class="fas fa-book mr-1"></i> Historias
       </button>
-      <!-- NUEVA PESTAÑA: REGALOS LIVE -->
+      <!-- REGALOS LIVE -->
       <button class="admin-tab giftsTabBtn px-4 py-2 bg-gray-300 text-gray-700 rounded" onclick="showTab('gifts', event)">
         <i class="fas fa-gift mr-1"></i> Regalos Live
       </button>
@@ -293,7 +289,7 @@
         <h2 class="text-2xl font-bold mb-4">Historias por Autor</h2>
         <div id="authorsList" class="space-y-4"></div>
       </section>
-      <!-- SECCIÓN: REGALOS LIVE -->
+      <!-- Sección Regalos Live -->
       <section id="giftsTab" class="admin-tab-content hidden">
         <h2 class="text-2xl font-bold mb-4">Administrar Regalos Live</h2>
         <!-- Formulario para subir un nuevo regalo -->
@@ -782,9 +778,7 @@
           alert("Error al acceder a la cámara: " + err);
         });
       const profileImg = document.getElementById('profile-image');
-      if (profileImg) {
-        profileImg.classList.add('live-border');
-      }
+      if (profileImg) { profileImg.classList.add('live-border'); }
       firebase.database().ref(`liveStreams/${currentBroadcasterId}/gifts`).on('child_added', snapshot => {
           let gift = snapshot.val();
           let giftUrl = "";
@@ -804,13 +798,9 @@
         liveLocalStream.getTracks().forEach(track => track.stop());
         liveLocalStream = null;
       }
-      if (liveBroadcasting) {
-        endLiveStream();
-      }
+      if (liveBroadcasting) { endLiveStream(); }
       const profileImg = document.getElementById('profile-image');
-      if (profileImg) {
-        profileImg.classList.remove('live-border');
-      }
+      if (profileImg) { profileImg.classList.remove('live-border'); }
     }
     
     function startLiveCountdown(duration, callback) {
@@ -819,13 +809,8 @@
       countdownEl.textContent = remaining;
       const interval = setInterval(() => {
         remaining--;
-        if (remaining > 0) {
-          countdownEl.textContent = remaining;
-        } else {
-          clearInterval(interval);
-          countdownEl.textContent = "";
-          callback();
-        }
+        if (remaining > 0) { countdownEl.textContent = remaining; }
+        else { clearInterval(interval); countdownEl.textContent = ""; callback(); }
       }, 1000);
     }
     
@@ -840,9 +825,7 @@
     
     function startBroadcasting() {
       livePeerConnection = new RTCPeerConnection();
-      liveLocalStream.getTracks().forEach(track => {
-        livePeerConnection.addTrack(track, liveLocalStream);
-      });
+      liveLocalStream.getTracks().forEach(track => { livePeerConnection.addTrack(track, liveLocalStream); });
       livePeerConnection.onicecandidate = event => {
         if (event.candidate) {
           firebase.database().ref(`liveStreams/${currentBroadcasterId}/candidates`).push(event.candidate.toJSON());
@@ -874,9 +857,7 @@
         });
         firebase.database().ref(`liveStreams/${currentBroadcasterId}/viewerCandidates`).on('child_added', snapshot => {
           const candidate = snapshot.val();
-          if (candidate && livePeerConnection) {
-            livePeerConnection.addIceCandidate(new RTCIceCandidate(candidate));
-          }
+          if (candidate && livePeerConnection) { livePeerConnection.addIceCandidate(new RTCIceCandidate(candidate)); }
         });
         firebase.database().ref(`liveStreams/${currentBroadcasterId}/views`).on('value', snapshot => {
           const views = snapshot.val() || 0;
@@ -893,17 +874,11 @@
       firebase.database().ref(`liveStreams/${currentBroadcasterId}`).remove();
       liveBroadcasting = false;
       const profileImg = document.getElementById('profile-image');
-      if (profileImg) {
-        profileImg.classList.remove('live-border');
-      }
-      setTimeout(() => {
-        closeLiveStreamModal();
-      }, 3000);
+      if (profileImg) { profileImg.classList.remove('live-border'); }
+      setTimeout(() => { closeLiveStreamModal(); }, 3000);
     }
     
-    document.getElementById('live-endBtn').addEventListener('click', () => {
-      endLiveStream();
-    });
+    document.getElementById('live-endBtn').addEventListener('click', () => { endLiveStream(); });
     
     function openLiveViewModal(broadcasterId) {
       liveBroadcasterId = broadcasterId;
@@ -953,12 +928,8 @@
     document.getElementById('live-view-closeBtn').addEventListener('click', closeLiveViewModal);
     
     /********** FUNCIONES DE REGALOS EN LIVE (USUARIO ESPECTADOR) **********/
-    document.getElementById('gift-btn').addEventListener('click', () => {
-      document.getElementById('gift-drawer').classList.add('open');
-    });
-    function closeGiftDrawer() {
-      document.getElementById('gift-drawer').classList.remove('open');
-    }
+    document.getElementById('gift-btn').addEventListener('click', () => { document.getElementById('gift-drawer').classList.add('open'); });
+    function closeGiftDrawer() { document.getElementById('gift-drawer').classList.remove('open'); }
     function sendGift(giftType) {
       const currentUser = firebase.auth().currentUser;
       if (!currentUser || currentUser.uid === liveBroadcasterId) {
@@ -975,7 +946,7 @@
     }
     function showGiftAnimation(giftUrl, senderName) {
       const transmitBtn = document.getElementById('live-startBtn');
-      if(transmitBtn) transmitBtn.style.display = 'none';
+      if(transmitBtn) { transmitBtn.style.display = 'none'; }
       const animContainer = document.getElementById('gift-animation');
       animContainer.innerHTML = `
         <div class="text-center">
@@ -983,9 +954,7 @@
           <img src="${giftUrl}" alt="Regalo" class="mx-auto" style="max-width: 100%; max-height: 100%;">
         </div>`;
       animContainer.classList.add('show');
-      setTimeout(() => {
-        animContainer.classList.remove('show');
-      }, 4000);
+      setTimeout(() => { animContainer.classList.remove('show'); }, 4000);
     }
     
     /********** EFECTO SKELETON **********/
@@ -1199,6 +1168,15 @@
     
     /********** NUEVA SECCIÓN: REGALOS LIVE (ADMIN) **********/
     function publishGift() {
+      // Añadimos un log para confirmar que se llama la función
+      console.log("Iniciando publicación de regalo...");
+      const currentUser = firebase.auth().currentUser;
+      if (!currentUser) {
+        alert("No estás autenticado. Por favor inicia sesión.");
+        return;
+      }
+      console.log("Usuario autenticado:", currentUser.email);
+      
       const title = document.getElementById('giftTitle').value.trim();
       const price = parseInt(document.getElementById('giftPrice').value);
       const fileInput = document.getElementById('giftFile');
@@ -1216,17 +1194,19 @@
       }
       const file = fileInput.files[0];
       const storageRef = firebase.storage().ref();
-      // Subimos a la carpeta "Live" en Storage para que coincida con la lógica de la plataforma original
+      // Subir el archivo a la carpeta "Live" en Storage
       const giftRef = storageRef.child('Live/' + Date.now() + '_' + file.name);
       const uploadTask = giftRef.put(file);
       uploadTask.on('state_changed', 
         function progress(snapshot) {
-          // (Opcional: Puedes mostrar el progreso)
+          // (Opcional: puedes mostrar el progreso)
+          console.log("Subiendo archivo...");
         },
         function error(err) {
           alert("Error al subir el regalo: " + err.message);
         },
         function complete() {
+          console.log("Archivo subido, obteniendo URL...");
           uploadTask.snapshot.ref.getDownloadURL().then(downloadURL => {
             const giftData = {
               title: title,
@@ -1239,6 +1219,7 @@
             firebase.database().ref('liveStreams/Live/gifts').push(giftData)
               .then(() => {
                 showToast("Regalo '" + title + "' publicado correctamente.");
+                console.log("Regalo publicado:", giftData);
                 document.getElementById('giftForm').reset();
               })
               .catch(err => {
@@ -1250,7 +1231,7 @@
     }
     
     document.getElementById('giftForm').addEventListener('submit', function(e) {
-      e.preventDefault();
+      e.preventDefault(); // Prevenir recarga
       publishGift();
     });
     
@@ -1295,10 +1276,10 @@
     }
     
     /********** FUNCIONES PARA COMPARTIR PERFIL **********/
-    // (Aquí se pueden incluir las funciones shareProfile y shareAuthorProfile según las necesites)
+    // Aquí puedes incluir shareProfile y shareAuthorProfile según necesites.
     
     /********** RESTO DEL CÓDIGO (historias, capítulos, etc.) **********/
-    // Se mantienen sin cambios.
+    // Se mantiene sin cambios.
     
   </script>
 </body>
