@@ -16,6 +16,8 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <!-- Agregamos Firebase Storage para la subida de archivos -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-storage-compat.js"></script>
   <script>
     // Configuración de Firebase (ajusta según tu proyecto)
     const firebaseConfig = {
@@ -390,7 +392,6 @@
              : "";
     }
     
-    // Se modificó toggleAdminAuth para aceptar el evento y prevenir la acción por defecto
     function toggleAdminAuth(e){
       if(e && e.preventDefault) e.preventDefault();
       const intro = document.getElementById('adminIntro');
@@ -404,7 +405,6 @@
       }
     }
     
-    // Se cambió event.target por event.currentTarget para asegurar que se aplique el estilo al botón
     function showTab(tabName, event){
       document.querySelectorAll('.admin-tab-content').forEach(tab => tab.classList.add('hidden'));
       document.getElementById(tabName + "Tab").classList.remove('hidden');
@@ -1189,35 +1189,32 @@
       });
     }
     
-    /********** HISTORIAS DE AUTORES **********/
-    // (Funciones loadAuthorsForStories, manageStories, closeStoriesModal ya definidas más arriba)
-    
     /********** NUEVA SECCIÓN: REGALOS LIVE (ADMIN) **********/
-    // Publicar un nuevo regalo live
+    // Publicar un nuevo regalo live desde el panel de administración
     function publishGift() {
       const title = document.getElementById('giftTitle').value.trim();
       const price = parseInt(document.getElementById('giftPrice').value);
       const fileInput = document.getElementById('giftFile');
-      if(!title) {
+      if (!title) {
         alert("Por favor, ingresa el título del regalo.");
         return;
       }
-      if(isNaN(price)) {
+      if (isNaN(price)) {
         alert("Por favor, ingresa un precio válido.");
         return;
       }
-      if(fileInput.files.length === 0) {
+      if (fileInput.files.length === 0) {
         alert("Por favor, selecciona un archivo para el regalo.");
         return;
       }
       const file = fileInput.files[0];
       const storageRef = firebase.storage().ref();
-      // Usamos la fecha y el nombre del archivo para crear un identificador único
-      const giftRef = storageRef.child('liveGifts/' + Date.now() + '_' + file.name);
+      // Subimos a la carpeta "Live" en Storage para que coincida con la estructura de la plataforma original
+      const giftRef = storageRef.child('Live/' + Date.now() + '_' + file.name);
       const uploadTask = giftRef.put(file);
       uploadTask.on('state_changed', 
         function progress(snapshot) {
-          // Puedes agregar feedback de progreso aquí si lo deseas
+          // Aquí puedes mostrar feedback de progreso si lo deseas
         },
         function error(err) {
           alert("Error al subir el regalo: " + err.message);
@@ -1231,7 +1228,8 @@
               fileType: file.type,
               timestamp: Date.now()
             };
-            firebase.database().ref('liveGifts').push(giftData)
+            // Guardamos la información en el nodo 'liveStreams/Live/gifts'
+            firebase.database().ref('liveStreams/Live/gifts').push(giftData)
               .then(() => {
                 alert("Regalo publicado correctamente.");
                 document.getElementById('giftForm').reset();
@@ -1249,8 +1247,8 @@
       publishGift();
     });
     
-    // Escuchar cambios en "liveGifts" para mostrar la lista en el dashboard
-    firebase.database().ref('liveGifts').on('value', function(snapshot) {
+    // Escuchar cambios en "liveStreams/Live/gifts" para mostrar la lista en el dashboard
+    firebase.database().ref('liveStreams/Live/gifts').on('value', function(snapshot) {
       const giftListDiv = document.getElementById('giftList');
       giftListDiv.innerHTML = "";
       snapshot.forEach(function(childSnapshot) {
@@ -1259,9 +1257,9 @@
         const div = document.createElement('div');
         div.className = "card flex items-center justify-between";
         let previewHtml = "";
-        if(gift.fileType.startsWith("image/")){
+        if (gift.fileType.startsWith("image/")) {
           previewHtml = `<img src="${gift.fileUrl}" alt="${gift.title}" class="w-16 h-16 object-cover rounded">`;
-        } else if(gift.fileType.startsWith("video/")){
+        } else if (gift.fileType.startsWith("video/")) {
           previewHtml = `<video src="${gift.fileUrl}" class="w-16 h-16 rounded" autoplay muted loop></video>`;
         } else {
           previewHtml = `<span>Archivo</span>`;
@@ -1283,19 +1281,18 @@
     });
     
     function deleteGift(giftKey) {
-      if(confirm("¿Estás seguro de que deseas eliminar este regalo?")) {
-        firebase.database().ref('liveGifts/' + giftKey).remove()
+      if (confirm("¿Estás seguro de que deseas eliminar este regalo?")) {
+        firebase.database().ref('liveStreams/Live/gifts/' + giftKey).remove()
           .then(() => { alert("Regalo eliminado."); })
           .catch(err => { alert("Error al eliminar el regalo: " + err.message); });
       }
     }
     
     /********** FUNCIONES PARA COMPARTIR PERFIL **********/
-    // (Funciones shareProfile y shareAuthorProfile ya definidas)
+    // (Aquí se pueden incluir funciones shareProfile y shareAuthorProfile según las necesites)
     
-    /********** RESTO DE CÓDIGO (historias, capítulos, etc.) **********/
-    // (Se mantienen sin cambios)
-    
+    /********** RESTO DEL CÓDIGO (historias, capítulos, etc.) **********/
+    // Se mantienen sin cambios
   </script>
 </body>
 </html>
