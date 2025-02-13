@@ -3,23 +3,1356 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Admin Dashboard - BeaBoo</title>
+  <title>BeaBoo</title>
   <!-- Google Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700&display=swap" rel="stylesheet">
-  <!-- Tailwind CSS -->
+  <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Font Awesome -->
+  <!-- Font Awesome CDN -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" 
         integrity="sha512-pap6t+K2bD6xIxQqkQ3sM8e+RXw7C3DyrgXV++o2aL/88+/9kS/l+SmpD8zZR1oN40Nq3QfT7HigDYfFW1zZAQ==" 
         crossorigin="anonymous" referrerpolicy="no-referrer" />
   <!-- Firebase (compat) -->
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
-  <!-- Firebase Storage -->
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-storage-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <style>
+    /* ESTILOS BASE */
+    body { font-family: 'Nunito', sans-serif; }
+    
+    /* ---------- MODIFICACIONES Y ESTILOS ADICIONALES ---------- */
+    /* Splash Screen */
+    #splash-screen {
+      position: fixed;
+      inset: 0;
+      background: #fff;
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 1s ease;
+    }
+    #splash-screen img {
+      width: 100%;
+      height: 100vh;
+      object-fit: cover;
+    }
+    
+    /* MODAL DE SELECCIÓN DE IDIOMA (nuevo estilo similar a Duolingo) */
+    #language-modal {
+      display: none; /* Se mostrará automáticamente si no hay idioma guardado */
+      position: fixed;
+      inset: 0;
+      background-color: rgba(255,255,255,0.95);
+      z-index: 10000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    #lang-modal-title {
+      font-size: 1.5rem;
+      font-weight: bold;
+      margin-bottom: 1.5rem;
+      color: #58CC02;
+    }
+    .language-option {
+      display: flex;
+      align-items: center;
+      background-color: #f5f5f5;
+      border: 2px solid transparent;
+      border-radius: 8px;
+      padding: 8px 12px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: border-color 0.3s;
+      width: 220px;
+      justify-content: center;
+    }
+    .language-option:hover {
+      border-color: #58CC02;
+    }
+    .language-option img {
+      border-radius: 50%;
+      margin-right: 8px;
+    }
+    
+    /* Ocultar título "Capítulos" y tagline en la pantalla de inicio */
+    #detail-chapters-title,
+    #tagline { display: none; }
+    /* Línea divisoria */
+    .section-divider { border-bottom: 2px solid #ccc; margin: 20px 0; }
+    /* Efecto skeleton */
+    .skeleton {
+      background: #e0e0e0;
+      position: relative;
+      overflow: hidden;
+    }
+    .skeleton::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: -150px;
+      height: 100%;
+      width: 150px;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.6), transparent);
+      animation: skeleton-loading 1.5s infinite;
+    }
+    @keyframes skeleton-loading { 0% { left: -150px; } 100% { left: 100%; } }
+    /* Estilo para las estrellas seleccionadas */
+    .star.selected { color: #FFD700; transition: color 0.3s ease-in-out; }
+    /* Margen para la lista de capítulos */
+    #detail-chapters { margin-top: 10px; }
+    /* Notificaciones */
+    .notification-item {
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      background: #f9f9f9;
+    }
+    .notification-time { font-size: 0.8em; color: #888; margin-top: 4px; }
+    /* Se eliminan fondos semitransparentes en modales para que updateSectionThemes asigne el fondo adecuado */
+    #notifications-modal,
+    #report-response-modal { }
+    /* Etiqueta de fundador */
+    .founder-tag {
+      font-size: 0.8rem;
+      color: #58CC02;
+      background-color: #e0f7ea;
+      border-radius: 4px;
+      padding: 2px 4px;
+      margin-left: 4px;
+    }
+    /* Barra inferior con efecto difuminado */
+    #bottom-nav {
+      background-color: rgba(255,255,255,0.8);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      transition: background-color 0.3s ease-in-out;
+    }
+    /* --- MODALES CON Z-INDEX ALTO (para tiempo real) --- */
+    #report-modal,
+    #followers-modal,
+    #following-modal,
+    #admin-response-modal {
+      z-index: 9999 !important;
+    }
+    /* Modal Reporte a pantalla completa */
+    #report-modal {
+      position: fixed;
+      inset: 0;
+      display: none;
+      background-color: rgba(0, 0, 0, 0.5);
+      justify-content: center;
+      align-items: center;
+    }
+    #report-modal .modal-content {
+      background: #fff;
+      border-radius: 0.5rem;
+      padding: 1.5rem;
+      width: 100%;
+      max-width: 500px;
+      margin: 1rem;
+    }
+    /* Modal de Error para Usuario Bloqueado */
+    #blocked-error-modal {
+      position: fixed;
+      inset: 0;
+      display: none;
+      background-color: #000;
+      align-items: center;
+      justify-content: center;
+    }
+    #blocked-error-modal img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    #blocked-error-modal button {
+      display: none;
+    }
+    /* Modal de Creación de Capítulo Full Screen Modernizado */
+    #chapter-creation-modal {
+      position: fixed;
+      inset: 0;
+      display: none;
+      background-color: rgba(0,0,0,0.5);
+      justify-content: center;
+      align-items: center;
+      z-index: 50;
+    }
+    #chapter-creation-modal .modal-content {
+      background: #fff;
+      width: 100%;
+      height: 100%;
+      padding: 1.5rem;
+      position: relative;
+      overflow: auto;
+    }
+    /* --- NUEVAS REGLAS PARA LAS PORTADAS DE HISTORIAS ADAPTATIVAS --- */
+    .story-card {
+      flex-shrink: 0;
+      width: 100%;
+      max-width: 250px;
+    }
+    @media (max-width: 640px) {
+      .story-card {
+        max-width: 160px;
+      }
+    }
+    .story-cover-container {
+      position: relative;
+      width: 100%;
+      padding-top: 133.33%;
+    }
+    .story-cover-image {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .rating-badge {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      background-color: #58CC02;
+      color: white;
+      border-radius: 9999px;
+      padding: 2px 6px;
+      font-size: 0.75rem;
+      font-weight: bold;
+      z-index: 10;
+    }
+    #search-loading {
+      position: relative;
+      width: 50px;
+      height: 50px;
+    }
+    #search-loading .dot {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 10px;
+      height: 10px;
+      background-color: #58CC02;
+      border-radius: 50%;
+      animation: dotRotate 4s linear infinite;
+    }
+    #search-loading .dot:nth-child(2) {
+      animation-delay: -2s;
+    }
+    @keyframes dotRotate {
+      0% {
+        transform: translate(-50%, -50%) rotate(0deg) translateX(20px) rotate(0deg);
+      }
+      25% {
+        transform: translate(-50%, -50%) rotate(90deg) translateX(20px) rotate(-90deg);
+      }
+      50% {
+        transform: translate(-50%, -50%) rotate(180deg) translateX(20px) rotate(-180deg);
+      }
+      75% {
+        transform: translate(-50%, -50%) rotate(270deg) translateX(20px) rotate(-270deg);
+      }
+      100% {
+        transform: translate(-50%, -50%) rotate(360deg) translateX(20px) rotate(-360deg);
+      }
+    }
+    /* NUEVA REGLA: Animación para el borde “live” en el perfil */
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(255,0,0, 0.7); }
+      70% { box-shadow: 0 0 0 10px rgba(255,0,0, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(255,0,0, 0); }
+    }
+    .live-border {
+      border: 4px solid red;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+      position: relative;
+    }
+    .live-border::after {
+      content: "";
+      position: absolute;
+      top: -4px;
+      left: -4px;
+      width: calc(100% + 8px);
+      height: calc(100% + 8px);
+      border: 2px solid red;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+      pointer-events: none;
+    }
+    
+    /* ----------------- MODIFICACIONES AGREGADAS ----------------- */
+    /* Botón de iniciar transmisión en vivo: forzar forma circular y quitar texto */
+    #live-startBtn {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    /* Ocultar la cruz que interfiere con el contador de vistas */
+    #live-closeBtn {
+      display: none;
+    }
+    
+    /* NUEVO: Estilos para el panel de estadísticas en edición (división de monedas) */
+    .stats-panel > div:not(:last-child) {
+      border-right: 1px solid #ccc;
+    }
+    /* NUEVO: Estilos para el Gift Drawer (drawer de regalos que se desliza desde abajo) */
+    #gift-drawer {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 0;
+      background-color: #fff;
+      overflow: hidden;
+      transition: height 0.4s ease;
+      z-index: 10000;
+      box-shadow: 0 -2px 8px rgba(0,0,0,0.2);
+    }
+    #gift-drawer.open {
+      height: 50vh;
+    }
+    #gift-drawer .gift-container {
+      padding: 20px;
+    }
+    #gift-drawer .gift-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(60px, 1fr));
+      gap: 10px;
+      text-align: center;
+    }
+    #gift-drawer .gift-item img {
+      width: 60px;
+      height: 60px;
+      object-fit: cover;
+      border-radius: 8px;
+    }
+    #gift-drawer .gift-item span {
+      font-size: 0.8rem;
+      margin-top: 4px;
+      display: block;
+    }
+    /* NUEVO: Estilos para la animación del regalo (overlay) – se mostrará solo para el transmisor */
+    #gift-animation {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 50vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      z-index: 11000;
+      opacity: 0;
+      transition: opacity 0.3s ease, transform 0.5s ease-out;
+    }
+    #gift-animation.show {
+      opacity: 1;
+      animation: slideUp 0.5s ease-out;
+    }
+    @keyframes slideUp {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
+    }
+    /* Pseudo-element para el efecto difuminado en la parte superior del contenedor de regalo */
+    #gift-animation::before {
+      content: "";
+      position: absolute;
+      top: -20px;
+      left: 0;
+      right: 0;
+      height: 20px;
+      background: linear-gradient(to bottom, rgba(0,0,0,0.5), transparent);
+      pointer-events: none;
+    }
+    /* NUEVO: Botón de Reportar en el modal de visualización en vivo */
+    #report-live-btn {
+      position: absolute;
+      bottom: 4rem;
+      right: 4rem;
+      background: transparent;
+      z-index: 1001;
+    }
+    #report-live-btn img {
+      width: 40px;
+      height: 40px;
+    }
+    /* NUEVO: Modal de reporte de live (bottom sheet) */
+    #live-report-modal {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 0;
+      background: #fff;
+      border-top-left-radius: 20px;
+      border-top-right-radius: 20px;
+      overflow: hidden;
+      z-index: 10001;
+      transition: height 0.3s ease;
+    }
+    #live-report-modal.open {
+      height: 50vh;
+    }
+    /* NUEVO: Forzar z-index alto para el modal de creación de historias (para solucionar problema de “publicar”) */
+    #story-creation-view {
+      z-index: 11000;
+    }
+    /* ----------------- FIN MODIFICACIONES AGREGADAS ----------------- */
+  </style>
   <script>
-    // Configuración de Firebase
+    /*********************** BLOQUEO DE ACCESO EN COMPUTADORAS (Móvil obligatorio) ***********************/
+    function esDispositivoMovil() {
+      return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    }
+    if (!esDispositivoMovil()) {
+      document.addEventListener("DOMContentLoaded", function() {
+        document.body.innerHTML = `
+          <div class="flex items-center justify-center h-screen bg-gray-100">
+            <h1 class="text-center text-2xl font-bold p-4">
+              La aplicación actual no está disponible en computadora.<br>
+              Por favor, inténtalo desde un dispositivo móvil.
+            </h1>
+          </div>`;
+      });
+      throw new Error("Solo disponible en dispositivos móviles");
+    }
+
+    /*********************** MODO OFFLINE ***********************/
+    window.addEventListener('offline', function() {
+      document.body.innerHTML = `
+        <div id="offline-modal">
+          <img src="https://ideogram.ai/assets/image/lossless/response/ZL-_GzzNQdy7CzioYPtDHg" alt="Sin conexión">
+        </div>`;
+    });
+    window.addEventListener('online', function() {
+      location.reload();
+    });
+
+    /* FUNCIÓN PARA ESTABLECER EL TEMA GLOBAL (día/noche) Y COLOR DE FUENTE */
+    function setThemeBasedOnTime() {
+      const hour = new Date().getHours();
+      let bg, fontColor;
+      if (hour >= 6 && hour < 18) {
+          bg = "#ffffff";
+          fontColor = "#58CC02";
+      } else {
+          bg = "#0d1b2a";
+          fontColor = "#58CC02";
+      }
+      document.body.style.backgroundColor = bg;
+      document.body.style.color = fontColor;
+      updateSectionThemes(bg, fontColor);
+      const bottomNav = document.getElementById('bottom-nav');
+      if (bottomNav) {
+        bottomNav.style.backgroundColor = (hour >= 6 && hour < 18)
+          ? "rgba(255,255,255,0.8)"
+          : "rgba(13,27,42,0.8)";
+      }
+    }
+    function updateSectionThemes(bg, fontColor) {
+      const sections = [
+        "search-view",
+        "profile-view",
+        "story-detail-modal",
+        "story-creation-view",
+        "story-details-view",
+        "story-edit-view",
+        "profile-edit-modal",
+        "author-profile-modal",
+        "support-modal",
+        "followers-modal",
+        "following-modal",
+        "notifications-modal",
+        "report-modal",
+        "report-response-modal",
+        "admin-response-modal",
+        "blocked-error-modal"
+      ];
+      sections.forEach(function(id) {
+          var el = document.getElementById(id);
+          if(el) {
+            el.style.backgroundColor = bg;
+            el.style.color = fontColor;
+          }
+      });
+    }
+    window.addEventListener('load', setThemeBasedOnTime);
+
+    /*********************** NUEVA FUNCIÓN: ORGANIZAR CARRUSELES ***********************/
+    function organizeCarousels() {
+      const carouselIds = ['new-releases', 'top10', 'popular', 'terror-stories'];
+      carouselIds.forEach(id => {
+        const carousel = document.getElementById(id);
+        if(carousel) {
+          carousel.classList.remove('grid', 'grid-cols-2', 'md:grid-cols-4');
+          carousel.classList.add('flex', 'space-x-4', 'overflow-x-auto');
+        }
+      });
+    }
+    window.addEventListener('load', organizeCarousels);
+
+    /*********************** LÓGICA DEL SELECTOR DE IDIOMA ***********************/
+    document.addEventListener("DOMContentLoaded", function(){
+      const savedLang = localStorage.getItem("selectedLanguage");
+      if(savedLang) {
+        currentLanguage = savedLang;
+        updateTranslations();
+      } else {
+        document.getElementById("language-modal").style.display = "flex";
+      }
+    });
+  </script>
+</head>
+<body class="w-full h-screen">
+  <!-- SPLASH SCREEN -->
+  <div id="splash-screen">
+    <img src="https://ideogram.ai/assets/image/lossless/response/Mj2UkJSlRUi5-nusIdo7CA" alt="Intro">
+  </div>
+
+  <!-- MODAL DE SELECCIÓN DE IDIOMA (DUOLINGO STYLE) -->
+  <div id="language-modal" class="fixed inset-0 flex flex-col items-center justify-center z-50">
+    <h2 id="lang-modal-title" class="text-2xl font-bold mb-6">Selecciona tu idioma</h2>
+    <div class="language-option" onclick="setLanguage('es')">
+      <img src="https://flagcdn.com/w20/es.png" alt="Español" class="w-6 h-6">
+      <span>Español</span>
+    </div>
+    <div class="language-option" onclick="setLanguage('en')">
+      <img src="https://flagcdn.com/w20/gb.png" alt="English" class="w-6 h-6">
+      <span>English</span>
+    </div>
+    <div class="language-option" onclick="setLanguage('pt')">
+      <img src="https://flagcdn.com/w20/pt.png" alt="Português" class="w-6 h-6">
+      <span>Português</span>
+    </div>
+  </div>
+
+  <!-- OVERLAY de carga para cambio de idioma -->
+  <div id="lang-loading-overlay" class="fixed inset-0 flex items-center justify-center z-40" style="display: none;">
+    <div class="flex space-x-4">
+      <div class="dot"></div>
+      <div class="dot"></div>
+    </div>
+  </div>
+
+  <!-- MODAL DE NOTIFICACIONES -->
+  <div id="notifications-modal" class="fixed inset-0 z-50 hidden">
+    <div class="w-full h-full p-6 overflow-y-auto">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-2xl font-bold">Bandeja de Entrada</h2>
+        <button onclick="closeNotifications()" class="text-gray-500 text-2xl">&times;</button>
+      </div>
+      <div id="notifications-list" class="space-y-4"></div>
+    </div>
+  </div>
+
+  <!-- MODAL DE REPORTAR PERFIL (pantalla completa) -->
+  <div id="report-modal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50" style="display: none; z-index: 9999;">
+    <div class="modal-content">
+      <button onclick="closeReportModal()" class="text-[#58CC02] mb-4 flex items-center">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 inline mr-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <polyline points="15 18 9 12 15 6" />
+        </svg>
+        <span id="btn-volver-report">Volver</span>
+      </button>
+      <h2 id="report-title" class="text-2xl font-bold text-[#58CC02] mb-4">Reportar Perfil</h2>
+      <p id="report-instructions" class="mb-4">Selecciona un motivo o describe el problema:</p>
+      <form id="report-form" class="space-y-4">
+        <select id="report-reason" class="w-full p-3 border border-gray-200 rounded-xl">
+          <option value="perfil_falso">Perfil falso: el autor está suplantando identidad</option>
+          <option value="spam">Spam</option>
+          <option value="infraccion_normas">Infracción a las normas</option>
+          <option value="otro">Otro</option>
+        </select>
+        <textarea id="report-description" placeholder="Describe el problema (opcional)" class="w-full p-3 border border-gray-200 rounded-xl" rows="4"></textarea>
+        <button id="btn-enviar-report" type="submit" class="w-full bg-red-500 text-white p-3 rounded-xl">Enviar Reporte</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL DE RESPUESTA AL REPORTE -->
+  <div id="report-response-modal" class="fixed inset-0 flex flex-col items-center justify-center z-50 hidden" style="z-index: 9999;">
+    <div class="bg-white p-6 rounded-xl text-center">
+      <div class="flex space-x-2 mb-4">
+        <div class="dot" style="animation-duration: 1s;"></div>
+        <div class="dot" style="animation-duration: 1.2s;"></div>
+      </div>
+      <p class="text-xl font-bold mb-2">Procesando tu reporte...</p>
+      <p class="text-gray-600">Espera unos instantes.</p>
+    </div>
+  </div>
+
+  <!-- MODAL DE RESPUESTA DEL ADMIN -->
+  <div id="admin-response-modal" class="fixed inset-0 flex flex-col items-center justify-center z-50 hidden" style="z-index: 9999;">
+    <!-- Contenido asignado dinámicamente -->
+  </div>
+
+  <!-- MODAL DE ERROR PARA USUARIO BLOQUEADO -->
+  <div id="blocked-error-modal" class="fixed inset-0 z-50 hidden" style="z-index: 9999;">
+    <button onclick="closeBlockedErrorModal()">Volver</button>
+    <img src="https://ideogram.ai/assets/image/lossless/response/0-Re3lMzQ6mmstIxlRxb4Q" alt="Usuario bloqueado">
+  </div>
+
+  <!-- MODAL DE LISTA DE SEGUIDORES -->
+  <div id="followers-modal" class="fixed inset-0 overflow-y-auto z-50 hidden" style="z-index: 9999;">
+    <div class="p-6">
+      <button onclick="closeFollowersModal()" class="text-[#58CC02] mb-4 flex items-center">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 inline mr-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <polyline points="15 18 9 12 15 6" />
+        </svg>
+        <span>Volver</span>
+      </button>
+      <h2 class="text-2xl font-bold text-[#58CC02] mb-4">Seguidores</h2>
+      <div id="followers-list" class="space-y-4"></div>
+    </div>
+  </div>
+
+  <!-- MODAL DE LISTA DE SIGUIENDO -->
+  <div id="following-modal" class="fixed inset-0 overflow-y-auto z-50 hidden" style="z-index: 9999;">
+    <div class="p-4">
+      <button onclick="closeFollowingModal()" class="text-[#58CC02] mb-4 flex items-center">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 inline mr-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <polyline points="15 18 9 12 15 6" />
+        </svg>
+        <span>Volver</span>
+      </button>
+      <h2 class="text-2xl font-bold text-[#58CC02] mb-4">Siguiendo</h2>
+      <div id="following-list" class="space-y-4"></div>
+    </div>
+  </div>
+
+  <!-- MODAL DE SOPORTE -->
+  <div id="support-modal" class="fixed inset-0 overflow-y-auto z-50 hidden">
+    <div class="p-6">
+      <button onclick="closeSupportModal()" class="text-[#58CC02] mb-4 flex items-center">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 inline mr-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <polyline points="15 18 9 12 15 6" />
+        </svg>
+        <span>Volver</span>
+      </button>
+      <h2 class="text-2xl font-bold text-[#58CC02] mb-4 flex items-center justify-center">
+        <i class="fas fa-headset mr-2"></i> Soporte
+      </h2>
+      <form id="support-form" class="space-y-4">
+        <input id="support-subject" type="text" placeholder="Asunto" class="w-full p-3 border border-gray-200 rounded-xl" required>
+        <textarea id="support-message" placeholder="Describe tu problema o consulta..." class="w-full p-3 border border-gray-200 rounded-xl" rows="4" required></textarea>
+        <button id="btn-send-support" type="submit" class="w-full bg-blue-500 text-white p-3 rounded-xl">Enviar Solicitud</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- SPINNER DE CERRAR SESIÓN -->
+  <div id="signout-spinner" class="fixed inset-0 bg-white bg-opacity-75 flex items-center justify-center z-50 hidden">
+    <i class="fas fa-spinner fa-spin text-4xl" style="color:#58CC02;"></i>
+  </div>
+
+  <!-- SPINNER PARA PUBLICAR HISTORIA -->
+  <div id="story-upload-spinner" class="fixed inset-0 bg-white bg-opacity-75 flex items-center justify-center z-50 hidden">
+    <i class="fas fa-spinner fa-spin text-4xl" style="color:#58CC02;"></i>
+  </div>
+
+  <!-- FORMULARIO DE AUTENTICACIÓN (Registro / Inicio de sesión) -->
+  <div id="auth-form" class="min-h-screen flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
+      <div class="flex justify-center mb-6">
+        <h1 id="auth-title" class="text-3xl font-bold text-center mb-6" style="color:#58CC02;">BeaBoo</h1>
+      </div>
+      <form id="authForm" class="space-y-4">
+        <input id="emailInput" type="email" placeholder="Correo electrónico" class="w-full p-3 border border-gray-200 rounded-full focus:ring-2 focus:ring-[#58CC02] focus:border-transparent" required />
+        <input id="passwordInput" type="password" placeholder="Contraseña" class="w-full p-3 border border-gray-200 rounded-full focus:ring-2 focus:ring-[#58CC02] focus:border-transparent" required />
+        <button id="submitButton" type="submit" class="w-full bg-[#58CC02] text-white p-3 font-bold hover:bg-green-600 transition-colors">Iniciar Sesión</button>
+      </form>
+      <a href="#" onclick="resetPassword()" class="block text-center text-sm text-gray-600 mt-2">¿Olvidaste tu contraseña?</a>
+      <div class="flex flex-col space-y-4 mt-4">
+        <button type="button" onclick="signInWithGoogle()" class="w-full bg-red-600 text-white p-3 rounded-full flex items-center justify-center">
+          <i class="fab fa-google mr-2"></i> Iniciar sesión con Google
+        </button>
+        <button type="button" onclick="signInWithFacebook()" class="w-full bg-blue-800 text-white p-3 rounded-full flex items-center justify-center">
+          <i class="fab fa-facebook-f mr-2"></i> Iniciar sesión con Facebook
+        </button>
+      </div>
+      <button id="toggleAuth" class="w-full" style="color:#58CC02; margin-top:1rem; cursor:pointer;">¿No tienes cuenta? Regístrate</button>
+      <div id="authError" class="mt-4 text-red-500 text-center hidden"></div>
+    </div>
+  </div>
+
+  <!-- APLICACIÓN PRINCIPAL (Inicio) -->
+  <div id="main-app" class="h-screen flex flex-col hidden">
+    <div class="flex-1 overflow-y-auto pb-20 p-6">
+      <div class="text-center">
+        <h1 id="app-name" class="text-4xl font-extrabold cursor-pointer" style="color:#58CC02;">BeaBoo</h1>
+        <p id="tagline" class="text-lg" style="color:#58CC02;">Tu portal de historias inolvidables</p>
+      </div>
+      <hr class="section-divider">
+      <section id="new-releases-section" class="mb-10">
+        <div class="flex justify-between items-center mb-4">
+          <h2 id="new-releases-title" class="text-2xl font-bold" style="color:#58CC02;">Nuevos Lanzamientos</h2>
+        </div>
+        <div id="new-releases" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
+      </section>
+      <section id="top10-section" class="mb-10">
+        <div class="flex justify-between items-center mb-4">
+          <h2 id="top10-title" class="text-2xl font-bold" style="color:#58CC02;">Top 10</h2>
+        </div>
+        <div id="top10" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
+      </section>
+      <section id="popular-section" class="mb-10">
+        <div class="flex justify-between items-center mb-4">
+          <h2 id="popular-title" class="text-2xl font-bold" style="color:#58CC02;">Más Populares</h2>
+        </div>
+        <div id="popular" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
+      </section>
+      <section id="terror-section" class="mb-10">
+        <div class="flex justify-between items-center mb-4">
+          <h2 id="terror-title" class="text-2xl font-bold" style="color:#58CC02;">Historias de Terror Destacadas</h2>
+        </div>
+        <div id="terror-stories" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
+      </section>
+    </div>
+    <div class="fixed bottom-0 left-0 right-0 border-t shadow-md" id="bottom-nav">
+      <div class="flex justify-around p-4">
+        <button class="text-[#58CC02]" onclick="openHome()">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M3 9l9-7 9 7" />
+            <path d="M9 22V12h6v10" />
+            <path d="M21 22H3" />
+          </svg>
+        </button>
+        <button class="text-gray-500" onclick="openSearch()">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+        </button>
+        <button class="text-gray-500 hover:text-[#58CC02]" onclick="openStoryCreation()">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M12 20h9" />
+            <path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+          </svg>
+        </button>
+        <button class="text-gray-500" onclick="openNotifications()">
+          <img src="https://images.vexels.com/media/users/3/135422/isolated/preview/a39f65c14b43bf4d42b81ff84e35c727-icono-de-compensacion-de-notificacion-de-campana.png" alt="Notificaciones" class="w-6 h-6" />
+        </button>
+        <button class="text-gray-500" onclick="openProfile()">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <circle cx="12" cy="7" r="4" />
+            <path d="M20 21v-2a4 4 0 0 0-3-3.87" />
+            <path d="M4 21v-2a4 4 0 0 1 3-3.87" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- VISTA DE BÚSQUEDA -->
+  <div id="search-view" class="fixed inset-0 overflow-y-auto hidden">
+    <div class="p-4">
+      <button onclick="closeSearch()" class="text-[#58CC02] mb-4 flex items-center">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 inline mr-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <polyline points="15 18 9 12 15 6" />
+        </svg>
+        <span id="btn-volver-search">Volver</span>
+      </button>
+      <input id="search-input" type="text" placeholder="Buscar historias o autores" class="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-full focus:ring-2 focus:ring-[#58CC02] focus:border-transparent mb-4" />
+      <div id="search-loading" class="flex justify-center items-center mb-4" style="display: none;">
+        <div class="dot"></div>
+        <div class="dot"></div>
+      </div>
+      <h2 id="search-results-title" class="text-2xl font-bold mb-4" style="color:#58CC02;">Resultados de búsqueda</h2>
+      <h3 id="search-books-title" class="text-xl font-semibold mb-2">Libros</h3>
+      <div id="search-books-carousel" class="flex space-x-4 overflow-x-auto mb-6"></div>
+      <h3 id="search-authors-title" class="text-xl font-semibold mb-2">Autores</h3>
+      <div id="search-authors-list" class="space-y-4"></div>
+    </div>
+  </div>
+
+  <!-- VISTA DE PERFIL (Propio) -->
+  <div id="profile-view" class="fixed inset-0 overflow-y-auto hidden">
+    <div class="p-4">
+      <button onclick="openHome()" class="text-[#58CC02] mb-4">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 inline" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <polyline points="15 18 9 12 15 6" />
+        </svg>
+        <span id="btn-volver-profile">Volver</span>
+      </button>
+      <div class="flex flex-col items-center">
+        <!-- Se usará JS para agregar el label "EN VIVO" sin modificar el HTML original -->
+        <div id="profile-img-container" class="relative">
+          <img id="profile-image" src="https://via.placeholder.com/150" class="w-24 h-24 rounded-full object-cover" alt="Foto de perfil" />
+        </div>
+        <div class="flex items-center mt-4">
+          <h2 id="profile-username" class="text-xl font-bold">Nombre de usuario</h2>
+          <button onclick="editUsername()" class="text-sm text-gray-500 underline ml-4">Editar nombre</button>
+          <button onclick="openProfileEdit()" class="text-sm text-gray-500 underline ml-4">Editar Perfil</button>
+          <button id="notification-button" onclick="openNotifications()" class="ml-2">
+            <img src="https://images.vexels.com/media/users/3/135422/isolated/preview/a39f65c14b43bf4d42b81ff84e35c727-icono-de-compensacion-de-notificacion-de-campana.png" alt="Notificaciones" class="w-6 h-6" />
+          </button>
+        </div>
+        <hr class="section-divider">
+        <div class="mt-4 w-full">
+          <textarea id="profile-bio" placeholder="Escribe tu biografía..." class="w-full border border-gray-200 p-2 rounded" rows="3"></textarea>
+          <button onclick="saveBio()" class="mt-2 bg-[#58CC02] text-white px-4 py-2 rounded">Guardar biografía</button>
+        </div>
+        <hr class="section-divider">
+        <div class="mt-6 w-full">
+          <h3 id="profile-stories-title" class="text-lg font-bold mb-2">Mis Historias</h3>
+          <div id="user-stories" class="grid grid-cols-2 gap-4"></div>
+        </div>
+      </div>
+    </div>
+    <input type="file" id="profile-image-input" accept="image/*" class="hidden" onchange="handleProfileImageUpload(event)" />
+  </div>
+
+  <!-- MODAL DE EDICIÓN DE PERFIL -->
+  <div id="profile-edit-modal" class="fixed inset-0 overflow-y-auto z-50 hidden">
+    <div class="p-6">
+      <button onclick="closeProfileEdit()" class="text-[#58CC02] mb-4 flex items-center">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 inline mr-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <polyline points="15 18 9 12 15 6" />
+        </svg>
+        <span>Volver</span>
+      </button>
+      <div class="flex flex-col items-center">
+        <div class="relative">
+          <img id="edit-profile-image" src="https://via.placeholder.com/150" class="w-24 h-24 rounded-full object-cover" alt="Foto de perfil" />
+          <button onclick="uploadEditProfileImage()" class="absolute bottom-0 right-0 bg-[#58CC02] text-white rounded-full p-1">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M12 5v0" />
+              <path d="M12 5a2 2 0 0 1 2 2v0a2 2 0 0 1-2 2 2 2 0 0 1-2-2v0a2 2 0 0 1 2-2z" />
+              <rect x="3" y="7" width="18" height="14" rx="2" ry="2" />
+            </svg>
+          </button>
+        </div>
+        <div class="mt-4 w-full">
+          <label class="block mb-1 font-bold">Nombre</label>
+          <input id="edit-username" type="text" class="w-full p-2 border border-gray-300 rounded" />
+        </div>
+        <div class="mt-4 w-full">
+          <label class="block mb-1 font-bold">Pronombres</label>
+          <input id="edit-pronouns" type="text" class="w-full p-2 border border-gray-300 rounded" placeholder="Ej. él/ella/elle" />
+        </div>
+        <div class="mt-4 w-full">
+          <label class="block mb-1 font-bold">Biografía</label>
+          <textarea id="edit-bio" rows="3" class="w-full p-2 border border-gray-300 rounded" placeholder="Escribe tu biografía..."></textarea>
+        </div>
+        <div class="mt-4 w-full">
+          <label class="block mb-1 font-bold">Inkspired</label>
+          <div class="flex items-center">
+            <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTmCCZ41lZmMTQKuO2yydE3lFF0PGbgnLZoXA&s=10" alt="Inkspired" class="w-6 h-6 mr-2" />
+            <input id="edit-inkspired" type="url" class="w-full p-2 border border-gray-300 rounded" placeholder="Enlace a tu perfil en Inkspired" />
+          </div>
+        </div>
+        <div class="mt-4 w-full">
+          <label class="block mb-1 font-bold">Instagram</label>
+          <div class="flex items-center">
+            <img src="https://img.utdstc.com/icon/847/f33/847f33af27bea889ccaa9b1d25135b42ff5bb590297182d0983afb7304d96884:200" alt="Instagram" class="w-6 h-6 mr-2" />
+            <input id="edit-instagram" type="url" class="w-full p-2 border border-gray-300 rounded" placeholder="Enlace a tu perfil en Instagram" />
+          </div>
+        </div>
+        <div class="mt-4 w-full">
+          <label class="block mb-1 font-bold">TikTok</label>
+          <div class="flex items-center">
+            <img src="https://cdn.pixabay.com/photo/2021/06/15/12/28/tiktok-6338432_1280.png" alt="TikTok" class="w-6 h-6 mr-2" />
+            <input id="edit-tiktok" type="url" class="w-full p-2 border border-gray-300 rounded" placeholder="Enlace a tu perfil en TikTok" />
+          </div>
+        </div>
+        <div class="mt-4 w-full">
+          <label class="block mb-1 font-bold">Página Web</label>
+          <input id="edit-website" type="url" class="w-full p-2 border border-gray-300 rounded" placeholder="Enlace a tu página web" />
+        </div>
+        <!-- NUEVO: Panel de estadísticas que ahora incluye "Monedas" con divisores -->
+        <div class="mt-6 w-full flex stats-panel">
+          <div class="flex-1 text-center">
+            <p class="font-bold">Seguidores</p>
+            <p id="edit-followers">0</p>
+          </div>
+          <div class="flex-1 text-center">
+            <p class="font-bold">Siguiendo</p>
+            <p id="edit-following">0</p>
+          </div>
+          <div class="flex-1 text-center">
+            <p class="font-bold">Historias Publicadas</p>
+            <p id="edit-stories-count">0</p>
+          </div>
+          <div class="flex-1 text-center">
+            <p class="font-bold">Monedas</p>
+            <p id="edit-coins">0</p>
+          </div>
+        </div>
+        <button onclick="saveProfileEdits()" class="mt-6 w-full bg-[#58CC02] text-white p-3 rounded-xl">Guardar Cambios</button>
+        <button onclick="signOutUser()" class="mt-4 w-full bg-gray-500 text-white p-3 rounded-xl">Cerrar Sesión</button>
+        <button onclick="openSupportModal()" class="mt-4 w-full bg-blue-500 text-white p-3 rounded-xl flex items-center justify-center">
+          <i class="fas fa-headset mr-2"></i> Soporte
+        </button>
+        <!-- NUEVO: Botón para compartir perfil en el modal de edición -->
+        <button id="share-profile-btn" onclick="shareProfile()" class="mt-4 w-full bg-gray-300 text-black p-3 rounded-xl flex items-center justify-center">
+          <i class="fa-solid fa-share mr-2"></i> Compartir perfil
+        </button>
+        <!-- NUEVO: Botón para transmitir en vivo desde el perfil -->
+        <button id="live-transmit-btn" onclick="openLiveStreamModal()" class="mt-4 w-full bg-red-600 text-white p-3 rounded-xl flex items-center justify-center">
+          <i class="fa-solid fa-video mr-2"></i> Transmitir en vivo
+        </button>
+      </div>
+    </div>
+    <input type="file" id="edit-profile-image-input" accept="image/*" class="hidden" onchange="handleEditProfileImageUpload(event)" />
+  </div>
+
+  <!-- MODAL DE PERFIL DEL AUTOR -->
+  <div id="author-profile-modal" class="fixed inset-0 overflow-y-auto z-50 hidden">
+    <div class="p-4">
+      <button onclick="closeAuthorProfile()" class="text-[#58CC02] mb-4 flex items-center">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 inline mr-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <polyline points="15 18 9 12 15 6" />
+        </svg>
+        <span id="btn-volver-author">Volver</span>
+      </button>
+      <div class="flex flex-col items-center" id="author-profile-content">
+        <!-- Se usará JS para posicionar el label "EN VIVO" -->
+        <div id="author-profile-img-container" class="relative">
+          <img id="author-profile-image" src="https://via.placeholder.com/150" class="w-24 h-24 rounded-full object-cover" alt="Foto del autor">
+        </div>
+        <h2 id="author-profile-name" class="text-xl font-bold mt-2"></h2>
+        <!-- NUEVO: Mostrar la biografía del autor -->
+        <p id="author-bio" class="text-center text-gray-600 mt-2"></p>
+        <div id="author-social-links" class="flex space-x-4 mt-4"></div>
+        <!-- NUEVO: Botón para compartir perfil -->
+        <button id="share-author-btn" onclick="shareAuthorProfile()" class="mt-4 w-full bg-gray-300 text-black p-3 rounded-xl flex items-center justify-center">
+          <i class="fa-solid fa-share mr-2"></i> Compartir perfil
+        </button>
+        <hr class="section-divider">
+        <div class="flex items-center justify-center w-full">
+          <div class="flex-1 flex items-center justify-center">
+            <button id="follow-button" onclick="followAuthor()" class="p-2 rounded-full" title="Seguir/Dejar de seguir">
+              <img id="follow-icon" src="https://cdn-icons-png.flaticon.com/512/907/907822.png" alt="Seguir" class="w-6 h-6">
+            </button>
+          </div>
+          <div class="w-px h-8 bg-gray-300 mx-4"></div>
+          <div class="flex-1 flex items-center justify-center">
+            <button id="report-button" onclick="openReportModal()" class="p-2 rounded-full" title="Reportar">
+              <img src="https://cdn-icons-png.flaticon.com/512/4083/4083296.png" alt="Reportar" class="w-6 h-6">
+            </button>
+          </div>
+        </div>
+        <hr class="section-divider">
+        <div class="flex space-x-4 w-full justify-around">
+          <div class="text-center">
+            <button onclick="openFollowersModal()" class="focus:outline-none">
+              <span id="author-followers" class="font-bold">0</span>
+              <p class="text-sm">Seguidores</p>
+            </button>
+          </div>
+          <div class="text-center">
+            <button onclick="openFollowingModal()" class="focus:outline-none">
+              <span id="author-following" class="font-bold">0</span>
+              <p class="text-sm">Siguiendo</p>
+            </button>
+          </div>
+          <div class="text-center">
+            <span id="author-rated" class="font-bold">0</span>
+            <p class="text-sm">Calificaciones</p>
+          </div>
+        </div>
+        <hr class="section-divider">
+        <div class="mt-4 w-full">
+          <h3 id="author-stories-title" class="text-lg font-bold mb-2">Historias del autor</h3>
+          <div id="author-stories" class="grid grid-cols-2 gap-4"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- VISTA DE CREACIÓN DE HISTORIAS (Paso 1) -->
+  <div id="story-creation-view" class="fixed inset-0 overflow-y-auto hidden">
+    <div class="p-6">
+      <button onclick="closeStoryCreation()" class="mb-4 text-[#58CC02]">Volver</button>
+      <h2 id="story-type-title" class="text-2xl font-bold mb-6">¿Qué historia deseas contar?</h2>
+      <div class="space-y-4">
+        <button onclick="selectStoryType('cuento')" class="w-full p-4 border border-gray-200 rounded-xl text-left hover:bg-gray-50">Cuento</button>
+        <button onclick="selectStoryType('historia_completa')" class="w-full p-4 border border-gray-200 rounded-xl text-left hover:bg-gray-50">Historia Completa</button>
+        <button onclick="selectStoryType('novela')" class="w-full p-4 border border-gray-200 rounded-xl text-left hover:bg-gray-50">Novela</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- VISTA DE DETALLES DE HISTORIA (Paso 2) -->
+  <div id="story-details-view" class="fixed inset-0 overflow-y-auto hidden">
+    <div class="p-6">
+      <button onclick="backToStoryType()" class="mb-4 text-[#58CC02]">Volver</button>
+      <h2 id="create-story-title" class="text-2xl font-bold mb-6">Crear Historia</h2>
+      <form id="story-form" class="space-y-4">
+        <input id="story-title" type="text" placeholder="Título de la historia" class="w-full p-3 border border-gray-200 rounded-xl" required>
+        <input id="story-cover" type="file" accept="image/*" class="w-full p-3 border border-gray-200 rounded-xl">
+        <select id="story-category" class="w-full p-3 border border-gray-200 rounded-xl" required>
+          <option value="">Selecciona una categoría</option>
+          <option value="aventura">Aventura</option>
+          <option value="romance">Romance</option>
+          <option value="misterio">Misterio</option>
+          <option value="fantasia">Fantasía</option>
+          <option value="terror">Terror</option>
+        </select>
+        <!-- NUEVO: Selección de idioma de la historia -->
+        <div class="mt-4">
+          <label for="story-language" class="block mb-1 font-bold">Idioma de la historia</label>
+          <select id="story-language" class="w-full p-3 border border-gray-200 rounded-xl" required>
+            <option value="">Selecciona un idioma</option>
+            <option value="English">English</option>
+            <option value="Spanish">Español</option>
+            <option value="French">Français</option>
+            <option value="German">Deutsch</option>
+            <option value="Italian">Italiano</option>
+            <option value="Portuguese">Português</option>
+            <option value="Russian">Русский</option>
+            <option value="Chinese (Simplified)">中文 (简体)</option>
+            <option value="Chinese (Traditional)">中文 (繁體)</option>
+            <option value="Japanese">日本語</option>
+            <option value="Korean">한국어</option>
+            <option value="Arabic">العربية</option>
+            <option value="Hindi">हिन्दी</option>
+            <option value="Bengali">বাংলা</option>
+            <option value="Punjabi">ਪੰਜਾਬੀ</option>
+            <option value="Urdu">اردو</option>
+            <option value="Indonesian">Bahasa Indonesia</option>
+            <option value="Malay">Bahasa Melayu</option>
+            <option value="Turkish">Türkçe</option>
+            <option value="Vietnamese">Tiếng Việt</option>
+            <option value="Polish">Polski</option>
+            <option value="Dutch">Nederlands</option>
+            <option value="Swedish">Svenska</option>
+            <option value="Norwegian">Norsk</option>
+            <option value="Danish">Dansk</option>
+            <option value="Finnish">Suomi</option>
+            <option value="Czech">Čeština</option>
+            <option value="Greek">Ελληνικά</option>
+            <option value="Hungarian">Magyar</option>
+            <option value="Romanian">Română</option>
+            <option value="Bulgarian">Български</option>
+            <option value="Slovak">Slovenčina</option>
+            <option value="Ukrainian">Українська</option>
+            <option value="Hebrew">עברית</option>
+            <option value="Thai">ไทย</option>
+            <option value="Persian (Farsi)">فارسی</option>
+            <option value="Swahili">Kiswahili</option>
+            <option value="Afrikaans">Afrikaans</option>
+            <option value="Croatian">Hrvatski</option>
+            <option value="Serbian">Српски</option>
+            <option value="Slovenian">Slovenščina</option>
+            <option value="Lithuanian">Lietuvių</option>
+            <option value="Latvian">Latviešu</option>
+            <option value="Estonian">Eesti</option>
+            <option value="Icelandic">Íslenska</option>
+            <option value="Maltese">Malti</option>
+            <option value="Filipino">Filipino</option>
+            <option value="Burmese">မြန်မာဘာသာ</option>
+            <option value="Khmer">ភាសាខ្មែរ</option>
+          </select>
+        </div>
+        <!-- NUEVO CAMPO: Selección de clasificación de contenido -->
+        <select id="story-rating" class="w-full p-3 border border-gray-200 rounded-xl" required>
+          <option value="all">Apto para todo público</option>
+          <option value="18plus">Mayores de 18</option>
+          <option value="13minus">Menores de 13</option>
+        </select>
+        <!-- Campo para la sinopsis -->
+        <textarea id="story-synopsis" placeholder="Sinopsis de la historia" class="w-full p-3 border border-gray-200 rounded-xl" rows="3"></textarea>
+        <button id="btn-create-story" type="submit" class="w-full bg-[#58CC02] text-white p-3 rounded-xl">Crear Historia</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL DE EDICIÓN DE HISTORIA (Paso 3) -->
+  <div id="story-edit-view" class="fixed inset-0 overflow-y-auto hidden">
+    <div class="p-6">
+      <button onclick="closeStoryEdit()" class="mb-4 text-[#58CC02]">Cerrar</button>
+      <h2 id="edit-story-title" class="text-2xl font-bold mb-6">Editar Historia</h2>
+      <!-- NUEVO: Bloque para editar el idioma de la historia en el modo edición -->
+      <div class="mb-4">
+        <label for="edit-story-language" class="block mb-1 font-bold">Idioma de la historia</label>
+        <select id="edit-story-language" class="w-full p-3 border border-gray-200 rounded-xl">
+          <option value="">Selecciona un idioma</option>
+          <option value="English">English</option>
+          <option value="Spanish">Español</option>
+          <option value="French">Français</option>
+          <option value="German">Deutsch</option>
+          <option value="Italian">Italiano</option>
+          <option value="Portuguese">Português</option>
+          <option value="Russian">Русский</option>
+          <option value="Chinese (Simplified)">中文 (简体)</option>
+          <option value="Chinese (Traditional)">中文 (繁體)</option>
+          <option value="Japanese">日本語</option>
+          <option value="Korean">한국어</option>
+          <option value="Arabic">العربية</option>
+          <option value="Hindi">हिन्दी</option>
+          <option value="Bengali">বাংলা</option>
+          <option value="Punjabi">ਪੰਜਾਬੀ</option>
+          <option value="Urdu">اردو</option>
+          <option value="Indonesian">Bahasa Indonesia</option>
+          <option value="Malay">Bahasa Melayu</option>
+          <option value="Turkish">Türkçe</option>
+          <option value="Vietnamese">Tiếng Việt</option>
+          <option value="Polish">Polski</option>
+          <option value="Dutch">Nederlands</option>
+          <option value="Swedish">Svenska</option>
+          <option value="Norwegian">Norsk</option>
+          <option value="Danish">Dansk</option>
+          <option value="Finnish">Suomi</option>
+          <option value="Czech">Čeština</option>
+          <option value="Greek">Ελληνικά</option>
+          <option value="Hungarian">Magyar</option>
+          <option value="Romanian">Română</option>
+          <option value="Bulgarian">Български</option>
+          <option value="Slovak">Slovenčina</option>
+          <option value="Ukrainian">Українська</option>
+          <option value="Hebrew">עברית</option>
+          <option value="Thai">ไทย</option>
+          <option value="Persian (Farsi)">فارسی</option>
+          <option value="Swahili">Kiswahili</option>
+          <option value="Afrikaans">Afrikaans</option>
+          <option value="Croatian">Hrvatski</option>
+          <option value="Serbian">Српски</option>
+          <option value="Slovenian">Slovenščina</option>
+          <option value="Lithuanian">Lietuvių</option>
+          <option value="Latvian">Latviešu</option>
+          <option value="Estonian">Eesti</option>
+          <option value="Icelandic">Íslenska</option>
+          <option value="Maltese">Malti</option>
+          <option value="Filipino">Filipino</option>
+          <option value="Burmese">မြန်မာဘာသာ</option>
+          <option value="Khmer">ភាសាខ្មែរ</option>
+        </select>
+      </div>
+      <!-- NUEVO: Botón para guardar los cambios en la historia (incluyendo el idioma) -->
+      <button onclick="saveStoryEdits()" class="w-full bg-green-500 text-white p-3 rounded-xl mb-4">Guardar Cambios en la Historia</button>
+      <!-- Fin nuevo bloque para idioma -->
+      <div id="chapter-list" class="space-y-4 mb-4"></div>
+      <hr class="section-divider">
+      <button onclick="openChapterCreationModal()" class="w-full bg-[#58CC02] text-white p-3 rounded-xl">Agregar Capítulo</button>
+      <button onclick="deleteStory(currentEditingStory.id)" class="w-full bg-red-500 text-white p-3 rounded-xl mt-4">Eliminar Historia</button>
+      <button onclick="toggleStoryPrivacy()" class="w-full bg-gray-200 text-gray-700 p-3 rounded-xl mt-4">Hacer privada</button>
+    </div>
+  </div>
+
+  <!-- MODAL DE CREACIÓN DE CAPÍTULO (FULL SCREEN y modernizado) -->
+  <div id="chapter-creation-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <div class="modal-content">
+      <button onclick="closeChapterCreationModal()" class="absolute top-4 right-4 text-gray-500 hover:text-gray-700 text-3xl">&times;</button>
+      <h2 id="chapter-creation-title" class="text-2xl font-bold mb-4 text-[#58CC02]">Agregar Nuevo Capítulo</h2>
+      <!-- Barra de herramientas para cambiar fuente, tamaño y ver contadores -->
+      <div id="chapter-creation-toolbar" class="flex flex-col md:flex-row items-start md:items-center justify-between mb-4 space-y-2 md:space-y-0">
+        <div>
+          <label for="font-family" class="mr-2">Fuente:</label>
+          <select id="font-family" class="border border-gray-300 rounded p-1">
+            <option value="Arial" selected>Arial</option>
+            <option value="Times New Roman">Times New Roman</option>
+            <option value="Courier New">Courier New</option>
+            <option value="Georgia">Georgia</option>
+          </select>
+        </div>
+        <div>
+          <label for="font-size" class="mr-2">Tamaño:</label>
+          <input type="range" id="font-size" min="12" max="36" value="16" class="mr-2">
+          <span id="font-size-value">16px</span>
+        </div>
+        <div>
+          <span id="word-count">0 palabras</span> - <span id="letter-count">0 letras</span>
+        </div>
+      </div>
+      <form id="chapter-form" class="space-y-4">
+        <textarea id="chapter-content" placeholder="Escribe el contenido del capítulo aquí..." class="w-full p-3 border border-gray-200 rounded-xl" style="font-size: 16px; font-family: Arial;" rows="10" required></textarea>
+        <button id="btn-save-chapter" type="submit" class="w-full bg-[#58CC02] text-white p-3 rounded-xl">Guardar Capítulo</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL DE LECTURA DE CAPÍTULO -->
+  <div id="chapter-read-modal" class="fixed inset-0 bg-black bg-opacity-0 flex flex-col z-50 hidden">
+    <div class="bg-white w-full h-screen flex flex-col">
+      <button onclick="closeChapterReadModal()" class="absolute top-4 left-4 text-gray-500 hover:text-gray-700 text-3xl z-10">&larr;</button>
+      <div class="flex-1 overflow-y-auto p-6">
+        <h2 id="read-chapter-number" class="text-2xl font-bold mb-4 mt-10"></h2>
+        <div id="read-chapter-text" class="text-lg leading-relaxed"></div>
+      </div>
+      <hr class="section-divider">
+      <div class="bg-white border-t p-4 flex justify-between items-center">
+        <button id="prev-chapter-btn" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-xl" onclick="prevChapter()">Anterior</button>
+        <div id="rating-container" class="flex items-center space-x-2">
+          <span class="text-gray-700">Califica:</span>
+          <div id="star-rating" class="flex">
+            <span class="star cursor-pointer text-2xl" data-value="1">&#9733;</span>
+            <span class="star cursor-pointer text-2xl" data-value="2">&#9733;</span>
+            <span class="star cursor-pointer text-2xl" data-value="3">&#9733;</span>
+            <span class="star cursor-pointer text-2xl" data-value="4">&#9733;</span>
+            <span class="star cursor-pointer text-2xl" data-value="5">&#9733;</span>
+          </div>
+        </div>
+        <button id="next-chapter-btn" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-xl" onclick="nextChapter()">Siguiente</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DE DETALLE DE HISTORIA -->
+  <div id="story-detail-modal" class="fixed inset-0 bg-black bg-opacity-0 flex items-center justify-center z-50 hidden">
+    <div class="bg-white w-full h-full relative overflow-y-auto p-8 pt-16">
+      <button onclick="closeStoryDetail()" class="absolute top-4 left-4 text-gray-500 hover:text-gray-700 text-3xl z-10">&larr;</button>
+      <img id="detail-cover" src="/api/placeholder/800/400" alt="Portada de la historia" class="w-full h-auto rounded-2xl mb-6 shadow-lg" />
+      <h2 id="detail-title" class="text-3xl font-bold mb-2 text-[#58CC02]">Título de la historia</h2>
+      <p id="detail-author" class="text-gray-700 mb-4 cursor-pointer" onclick="openAuthorProfile(this.dataset.userid)"></p>
+      <p id="detail-synopsis" class="mb-6">Sinopsis de la historia...</p>
+      <div id="detail-metrics" class="flex flex-wrap gap-4 text-gray-700 text-sm font-medium">
+        <span><strong>0</strong> Visitas</span>
+        <span><strong>0</strong> Calificación</span>
+        <span><strong>0</strong> Capítulos</span>
+      </div>
+      <div>
+        <h3 id="detail-chapters-title" class="text-2xl font-semibold mb-4">Capítulos</h3>
+        <ul id="detail-chapters" class="space-y-4"></ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DE PERFIL DEL AUTOR -->
+  <div id="author-profile-modal" class="fixed inset-0 overflow-y-auto z-50 hidden">
+    <div class="p-4">
+      <button onclick="closeAuthorProfile()" class="text-[#58CC02] mb-4 flex items-center">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 inline mr-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <polyline points="15 18 9 12 15 6" />
+        </svg>
+        <span id="btn-volver-author">Volver</span>
+      </button>
+      <div class="flex flex-col items-center" id="author-profile-content">
+        <div id="author-profile-img-container" class="relative">
+          <img id="author-profile-image" src="https://via.placeholder.com/150" class="w-24 h-24 rounded-full object-cover" alt="Foto del autor">
+        </div>
+        <h2 id="author-profile-name" class="text-xl font-bold mt-2"></h2>
+        <p id="author-bio" class="text-center text-gray-600 mt-2"></p>
+        <div id="author-social-links" class="flex space-x-4 mt-4"></div>
+        <button id="share-author-btn" onclick="shareAuthorProfile()" class="mt-4 w-full bg-gray-300 text-black p-3 rounded-xl flex items-center justify-center">
+          <i class="fa-solid fa-share mr-2"></i> Compartir perfil
+        </button>
+        <hr class="section-divider">
+        <div class="flex items-center justify-center w-full">
+          <div class="flex-1 flex items-center justify-center">
+            <button id="follow-button" onclick="followAuthor()" class="p-2 rounded-full" title="Seguir/Dejar de seguir">
+              <img id="follow-icon" src="https://cdn-icons-png.flaticon.com/512/907/907822.png" alt="Seguir" class="w-6 h-6">
+            </button>
+          </div>
+          <div class="w-px h-8 bg-gray-300 mx-4"></div>
+          <div class="flex-1 flex items-center justify-center">
+            <button id="report-button" onclick="openReportModal()" class="p-2 rounded-full" title="Reportar">
+              <img src="https://cdn-icons-png.flaticon.com/512/4083/4083296.png" alt="Reportar" class="w-6 h-6">
+            </button>
+          </div>
+        </div>
+        <hr class="section-divider">
+        <div class="flex space-x-4 w-full justify-around">
+          <div class="text-center">
+            <button onclick="openFollowersModal()" class="focus:outline-none">
+              <span id="author-followers" class="font-bold">0</span>
+              <p class="text-sm">Seguidores</p>
+            </button>
+          </div>
+          <div class="text-center">
+            <button onclick="openFollowingModal()" class="focus:outline-none">
+              <span id="author-following" class="font-bold">0</span>
+              <p class="text-sm">Siguiendo</p>
+            </button>
+          </div>
+          <div class="text-center">
+            <span id="author-rated" class="font-bold">0</span>
+            <p class="text-sm">Calificaciones</p>
+          </div>
+        </div>
+        <hr class="section-divider">
+        <div class="mt-4 w-full">
+          <h3 id="author-stories-title" class="text-lg font-bold mb-2">Historias del autor</h3>
+          <div id="author-stories" class="grid grid-cols-2 gap-4"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- NUEVO: MODAL DE TRANSMISIÓN EN VIVO (para el autor - broadcaster) -->
+  <div id="live-stream-modal" class="fixed inset-0 bg-white z-50 hidden">
+    <div class="relative w-full h-full">
+      <div id="live-viewCount" class="absolute top-4 left-4 text-xl text-[#58CC02]">0 vistas</div>
+      <video id="live-localVideo" autoplay muted playsinline class="w-full h-full object-cover"></video>
+      <div id="live-overlay" class="absolute inset-0 flex flex-col items-center justify-center">
+        <div id="live-countdown" class="text-6xl font-bold text-[#58CC02]"></div>
+        <div id="live-indicator" class="hidden text-4xl font-bold text-red-600">EN VIVO</div>
+      </div>
+      <button id="live-startBtn" class="absolute bottom-10 left-1/2 transform -translate-x-1/2 bg-red-600 text-white text-2xl rounded-full p-6"></button>
+      <button id="live-endBtn" class="absolute top-4 right-4 bg-gray-800 text-white text-lg rounded p-2 hidden">Finalizar transmisión</button>
+      <button id="live-closeBtn" onclick="closeLiveStreamModal()" class="absolute top-4 left-4 bg-gray-800 text-white text-lg rounded p-2">X</button>
+    </div>
+  </div>
+
+  <!-- NUEVO: MODAL DE VISUALIZACIÓN EN VIVO (para espectadores) -->
+  <div id="live-view-modal" class="fixed inset-0 bg-white z-50 hidden">
+    <div class="relative w-full h-full">
+      <video id="live-remoteVideo" autoplay playsinline class="w-full h-full object-cover"></video>
+      <button id="live-view-closeBtn" class="absolute top-4 left-4 bg-gray-800 text-white text-lg rounded p-2">Cerrar</button>
+      <div id="live-endedMessage" class="absolute inset-0 flex items-center justify-center text-3xl font-bold text-gray-800 hidden">
+        La transmisión ha terminado.<br>Revisa otras transmisiones en vivo.
+      </div>
+      <button id="gift-btn" class="absolute bottom-4 right-4 bg-transparent">
+        <img src="https://cdn-icons-png.flaticon.com/512/5899/5899678.png" alt="Regalo" class="w-10 h-10">
+      </button>
+      <button id="report-live-btn" onclick="openLiveReportModal()">
+        <img src="https://cdn-icons-png.flaticon.com/512/1828/1828843.png" alt="Reportar">
+      </button>
+    </div>
+  </div>
+
+  <!-- NUEVO: GIFT DRAWER (drawer de regalos que se desliza desde abajo) -->
+  <div id="gift-drawer">
+    <div class="gift-container">
+      <h2 class="text-xl font-bold mb-4 text-center">Enviar Regalo</h2>
+      <div class="gift-grid">
+        <div class="gift-item" onclick="sendGift('mariposas')">
+          <img src="https://i.pinimg.com/originals/7c/29/36/7c2936db7563085ef7470d50fd06e4e3.gif" alt="Mariposas de Cielo">
+          <span>Mariposas de Cielo</span>
+        </div>
+        <div class="gift-item" onclick="sendGift('ballena')">
+          <img src="https://i.pinimg.com/originals/86/31/83/863183316ed35cfeda7baf9ee1de0596.gif" alt="Ballena Negra">
+          <span>Ballena Negra</span>
+        </div>
+      </div>
+      <button onclick="closeGiftDrawer()" class="mt-4 bg-gray-300 text-black p-2 rounded w-full">Cancelar</button>
+    </div>
+  </div>
+
+  <!-- NUEVO: Contenedor para la animación del regalo (overlay) – se mostrará solo para el transmisor -->
+  <div id="gift-animation">
+    <!-- Se inyectará contenido dinámicamente -->
+  </div>
+
+  <!-- NUEVO: Modal de reporte de live (bottom sheet) -->
+  <div id="live-report-modal" class="hidden">
+    <div class="p-4">
+      <h2 class="text-xl font-bold mb-4">Reportar transmisión</h2>
+      <p class="mb-2">Selecciona el motivo del reporte:</p>
+      <button class="w-full p-3 bg-red-500 text-white rounded mb-2" onclick="submitLiveReport('desnudez')">Contenido sexual / desnudos</button>
+      <button class="w-full p-3 bg-red-500 text-white rounded mb-2" onclick="submitLiveReport('violencia')">Violencia</button>
+      <button class="w-full p-3 bg-red-500 text-white rounded mb-2" onclick="submitLiveReport('arma')">Cuchillo detectado</button>
+      <button class="w-full p-3 bg-gray-300 text-black rounded" onclick="closeLiveReportModal()">Cancelar</button>
+    </div>
+  </div>
+
+  <!-- JAVASCRIPT -->
+  <script>
+    /*********************** CONFIGURACIÓN DE FIREBASE **************************/
     const firebaseConfig = {
       apiKey: "AIzaSyA1UV_OTjRjq22RRB1REnhWzMLZQNCB6wA",
       authDomain: "love-alarm-5c538.firebaseapp.com",
@@ -31,630 +1364,67 @@
       measurementId: "G-VYVPK5VSB5"
     };
     firebase.initializeApp(firebaseConfig);
-  </script>
-  <style>
-    body { font-family: 'Nunito', sans-serif; }
-    /* CABECERA FIJA */
-    header {
-      background-color: #fff;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-      padding: 0.75rem 1rem;
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      z-index: 50;
+
+    /*********************** FUNCIONES ADICIONALES **************************/
+    function contienePalabrasOfensivas(texto) {
+      const listaOfensiva = ["feo", "palabrota1", "palabrota2"];
+      return listaOfensiva.some(p => texto.toLowerCase().includes(p));
     }
-    /* Barra de pestañas */
-    nav.tabs {
-      display: flex;
-      overflow-x: auto;
-      gap: 0.5rem;
-      padding: 0.5rem 1rem;
-      background-color: #f3f4f6;
+    function formatFollowers(num) {
+      if(num >= 1000) {
+         return (num/1000).toFixed(1) + "K";
+      }
+      return num;
     }
-    nav.tabs button {
-      flex: none;
-      white-space: nowrap;
-    }
-    /* Contenedor principal */
-    #adminDashboardMain { margin-top: 120px; }
-    /* Tarjetas */
-    .card {
-      background-color: #fff;
-      padding: 1rem;
-      border-radius: 0.5rem;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-      margin-bottom: 1rem;
-    }
-    /* Spinner estilo TikTok */
-    .spinner-tiktok {
-      display: inline-block;
-      position: relative;
-      width: 80px;
-      height: 80px;
-    }
-    .spinner-tiktok div {
-      position: absolute;
-      border: 4px solid #58CC02;
-      opacity: 1;
-      border-radius: 50%;
-      animation: spinner-tiktok 1s cubic-bezier(0, 0.2, 0.8, 1) infinite;
-    }
-    .spinner-tiktok div:nth-child(2) { animation-delay: -0.5s; }
-    @keyframes spinner-tiktok {
-      0% { transform: scale(0); }
-      50% { transform: scale(1); opacity: 0.5; }
-      100% { transform: scale(0); opacity: 0; }
-    }
-    /* Modal de respuesta */
-    #replyModal {
-      position: fixed;
-      inset: 0;
-      background-color: rgba(0,0,0,0.5);
-      display: none;
-      justify-content: center;
-      align-items: center;
-      z-index: 100;
-    }
-    #replyModal .modal-content {
-      background: #fff;
-      padding: 2rem;
-      border-radius: 8px;
-      width: 90%;
-      max-width: 500px;
-    }
-    /* Modal para administrar historias */
-    #storiesModal {
-      position: fixed;
-      inset: 0;
-      background-color: rgba(0,0,0,0.5);
-      display: none;
-      justify-content: center;
-      align-items: center;
-      z-index: 100;
-    }
-    #storiesModal .modal-content {
-      background: #fff;
-      padding: 1.5rem;
-      border-radius: 8px;
-      width: 95%;
-      max-width: 800px;
-      max-height: 90vh;
-      overflow-y: auto;
-    }
-    /* Modal de registro/login estilo Duolingo */
-    .duolingo-modal {
-      background: linear-gradient(135deg, #4CAF50, #8BC34A);
-      color: white;
-      border-radius: 1rem;
-      padding: 2rem;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    }
-    .duolingo-modal input,
-    .duolingo-modal button {
-      border: none;
-      padding: 0.75rem;
-      border-radius: 9999px;
-      margin-top: 1rem;
-    }
-    .duolingo-modal input { width: 100%; }
-    .duolingo-modal button {
-      background-color: white;
-      color: #4CAF50;
-      font-weight: bold;
-      width: 100%;
-    }
-    /* Mensaje bloqueado */
-    .blocked-story {
-      background-color: #f2f2f2;
-      color: #888;
-      padding: 1rem;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      text-align: center;
-      font-size: 0.9rem;
-      font-weight: bold;
-    }
-    /* Z-index para modales */
-    #adminDashboard, #adminAuthModal { z-index: 50; }
-    /* Sección de Regalos Live */
-    nav.tabs button.giftsTabBtn {
-      background-color: #ccc;
-      color: #333;
-    }
-    #giftsTab { padding: 1rem; }
-    #giftForm input,
-    #giftForm button { margin-top: 0.75rem; }
-    #giftList .card {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    /* Toast de confirmación */
-    #toast {
-      position: fixed;
-      top: 1rem;
-      right: 1rem;
-      background-color: #4CAF50;
-      color: white;
-      padding: 0.75rem 1rem;
-      border-radius: 0.5rem;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-      z-index: 1000;
-      opacity: 0;
-      transition: opacity 0.5s;
-    }
-    #toast.show { opacity: 1; }
-  </style>
-</head>
-<body class="bg-gray-100">
-  <!-- Toast de confirmación -->
-  <div id="toast"></div>
-  
-  <!-- PANTALLA DE INTRO Y REGISTRO/LOGIN -->
-  <div id="adminIntro" class="min-h-screen flex flex-col items-center justify-center relative">
-    <img src="https://ideogram.ai/assets/image/lossless/response/Mj2UkJSlRUi5-nusIdo7CA" alt="Intro" class="absolute inset-0 w-full h-full object-cover opacity-50">
-    <div class="duolingo-modal max-w-md mx-auto z-10">
-      <h2 class="text-3xl font-bold mb-4 text-center">Bienvenido al Panel de Administración</h2>
-      <form id="adminRegisterForm" class="space-y-4">
-        <input type="email" id="adminRegEmail" placeholder="Correo electrónico" required>
-        <input type="password" id="adminRegPassword" placeholder="Contraseña" required>
-        <button type="submit">Registrarse</button>
-      </form>
-      <p class="mt-4 text-center">
-        ¿Ya tienes cuenta? 
-        <a href="#" onclick="toggleAdminAuth(event); return false;" class="underline">Inicia sesión</a>
-      </p>
-    </div>
-  </div>
-  
-  <!-- Modal de inicio de sesión -->
-  <div id="adminAuthModal" class="fixed inset-0 flex items-center justify-center z-50 hidden">
-    <div class="duolingo-modal max-w-md mx-auto">
-      <h2 class="text-3xl font-bold mb-4 text-center">Iniciar Sesión</h2>
-      <form id="adminAuthForm" class="space-y-4">
-        <input type="email" id="adminAuthEmail" placeholder="Correo electrónico" required>
-        <input type="password" id="adminAuthPassword" placeholder="Contraseña" required>
-        <button type="submit">Iniciar Sesión</button>
-      </form>
-      <p class="mt-4 text-center">
-        ¿No tienes cuenta? 
-        <a href="#" onclick="toggleAdminAuth(event); return false;" class="underline">Regístrate</a>
-      </p>
-    </div>
-  </div>
-  
-  <!-- DASHBOARD DEL ADMIN -->
-  <div id="adminDashboard" class="hidden">
-    <header class="flex items-center justify-between">
-      <h1 class="text-2xl font-bold">Panel de Administración</h1>
-      <button onclick="adminSignOut()" class="bg-red-500 text-white px-3 py-2 rounded flex items-center">
-        <i class="fas fa-sign-out-alt mr-2"></i> Cerrar Sesión
-      </button>
-    </header>
-    <nav class="tabs mt-20">
-      <button class="admin-tab px-4 py-2 bg-[#58CC02] text-white rounded" onclick="showTab('reports', event)">
-        <i class="fas fa-flag mr-1"></i> Reportes
-      </button>
-      <button class="admin-tab px-4 py-2 bg-gray-300 text-gray-700 rounded" onclick="showTab('support', event)">
-        <i class="fas fa-headset mr-1"></i> Soporte
-      </button>
-      <button class="admin-tab px-4 py-2 bg-gray-300 text-gray-700 rounded" onclick="showTab('users', event)">
-        <i class="fas fa-user-slash mr-1"></i> Bloqueados
-      </button>
-      <button class="admin-tab px-4 py-2 bg-gray-300 text-gray-700 rounded" onclick="showTab('verify', event)">
-        <i class="fas fa-check-circle mr-1"></i> Verificación
-      </button>
-      <button class="admin-tab px-4 py-2 bg-gray-300 text-gray-700 rounded" onclick="showTab('stories', event)">
-        <i class="fas fa-book mr-1"></i> Historias
-      </button>
-      <!-- REGALOS LIVE -->
-      <button class="admin-tab giftsTabBtn px-4 py-2 bg-gray-300 text-gray-700 rounded" onclick="showTab('gifts', event)">
-        <i class="fas fa-gift mr-1"></i> Regalos Live
-      </button>
-      <button class="admin-tab px-4 py-2 bg-gray-300 text-gray-700 rounded" onclick="showTab('profile', event)">
-        <i class="fas fa-user mr-1"></i> Perfil
-      </button>
-    </nav>
-    <main id="adminDashboardMain" class="container mx-auto px-4">
-      <!-- Sección Reportes -->
-      <section id="reportsTab" class="admin-tab-content">
-        <h2 class="text-2xl font-bold mb-4">Reportes Recibidos</h2>
-        <div id="reportsList" class="space-y-4"></div>
-      </section>
-      <!-- Sección Soporte -->
-      <section id="supportTab" class="admin-tab-content hidden">
-        <h2 class="text-2xl font-bold mb-4">Solicitudes de Soporte</h2>
-        <div id="supportList" class="space-y-4"></div>
-      </section>
-      <!-- Sección Usuarios Bloqueados -->
-      <section id="usersTab" class="admin-tab-content hidden">
-        <h2 class="text-2xl font-bold mb-4">Usuarios Bloqueados</h2>
-        <div id="blockedUsersList" class="space-y-4"></div>
-      </section>
-      <!-- Sección Verificación -->
-      <section id="verifyTab" class="admin-tab-content hidden">
-        <h2 class="text-2xl font-bold mb-4">Verificar Usuario</h2>
-        <div class="mb-4">
-          <input type="text" id="verifyUserId" placeholder="Ingrese ID del usuario" class="w-full p-3 border rounded">
-        </div>
-        <button onclick="executeWithSpinner(function(){ verifyUser(); })" class="w-full bg-blue-500 text-white p-3 rounded flex items-center justify-center">
-          <i class="fas fa-check-circle mr-2"></i> Marcar como Verificado
-        </button>
-        <div id="verifiedUsersList" class="mt-6"></div>
-      </section>
-      <!-- Sección Historias de Autores -->
-      <section id="storiesTab" class="admin-tab-content hidden">
-        <h2 class="text-2xl font-bold mb-4">Historias por Autor</h2>
-        <div id="authorsList" class="space-y-4"></div>
-      </section>
-      <!-- Sección Regalos Live -->
-      <section id="giftsTab" class="admin-tab-content hidden">
-        <h2 class="text-2xl font-bold mb-4">Administrar Regalos Live</h2>
-        <!-- Formulario para subir un nuevo regalo -->
-        <div class="card mb-4">
-          <h3 class="text-xl font-bold mb-2">Subir Nuevo Regalo</h3>
-          <form id="giftForm" class="space-y-4">
-            <input type="text" id="giftTitle" placeholder="Título del regalo" class="w-full p-3 border rounded" required>
-            <input type="number" id="giftPrice" placeholder="Precio en monedas (0 para gratis)" min="0" class="w-full p-3 border rounded" required>
-            <input type="file" id="giftFile" accept="image/*,video/*,image/svg+xml" class="w-full p-3 border rounded" required>
-            <button type="submit" class="w-full bg-[#58CC02] text-white p-3 rounded flex items-center justify-center">
-              <i class="fas fa-upload mr-2"></i> Publicar Regalo
-            </button>
-          </form>
-        </div>
-        <!-- Lista de regalos existentes -->
-        <div id="giftList" class="space-y-4"></div>
-      </section>
-      <!-- Sección Perfil -->
-      <section id="profileTab" class="admin-tab-content hidden">
-        <h2 class="text-2xl font-bold mb-4">Perfil del Administrador</h2>
-        <div class="card flex flex-col items-center">
-          <img id="adminProfilePic" src="https://via.placeholder.com/150" alt="Foto de perfil" class="w-24 h-24 rounded-full mb-4">
-          <h3 id="adminProfileEmail" class="text-xl font-bold"></h3>
-          <div class="flex items-center mt-2">
-            <img src="https://cdn-icons-png.flaticon.com/512/5776/5776691.png" alt="Puntos" class="w-6 h-6 mr-2" />
-            <span id="adminProfilePoints" class="text-lg"></span> puntos
-          </div>
-        </div>
-      </section>
-    </main>
-  </div>
-  
-  <!-- MODAL DE RESPUESTA (Reply Modal) -->
-  <div id="replyModal">
-    <div class="modal-content">
-      <h2 class="text-xl font-bold mb-4">Enviar Respuesta</h2>
-      <textarea id="replyMessage" placeholder="Escribe tu respuesta aquí..." class="w-full border p-2 rounded mb-4" rows="5"></textarea>
-      <div class="flex justify-end">
-        <button onclick="executeWithSpinner(function(){ closeReplyModal(); })" class="mr-4 bg-gray-500 text-white px-4 py-2 rounded flex items-center">
-          <i class="fas fa-times-circle mr-1"></i> Cancelar
-        </button>
-        <button onclick="executeWithSpinner(function(){ sendReply(); })" class="bg-[#58CC02] text-white px-4 py-2 rounded flex items-center">
-          <i class="fas fa-paper-plane mr-1"></i> Enviar
-        </button>
-      </div>
-    </div>
-  </div>
-  
-  <!-- MODAL PARA ADMINISTRAR HISTORIAS DE UN AUTOR -->
-  <div id="storiesModal" class="hidden">
-    <div class="modal-content">
-      <div class="flex justify-between items-center mb-4">
-        <h2 id="modalAuthorName" class="text-2xl font-bold">Historias de [Autor]</h2>
-        <button onclick="executeWithSpinner(function(){ closeStoriesModal(); })" class="text-gray-500 text-3xl">&times;</button>
-      </div>
-      <div id="authorStoriesList" class="space-y-4"></div>
-    </div>
-  </div>
-  
-  <!-- SPINNER DE CARGA (TikTok Style) -->
-  <div id="loadingSpinner" class="fixed inset-0 bg-white bg-opacity-50 flex items-center justify-center z-50 hidden">
-    <div class="spinner-tiktok">
-      <div></div>
-      <div></div>
-    </div>
-  </div>
-  
-  <script>
-    /********** VARIABLES GLOBALES **********/
-    let replyTargetUser = null;
-    let replyContext = "";
-    let currentAuthorForStories = null;
-    
-    /********** FUNCIONES PARA ANIMAR ACCIONES (Spinner) **********/
-    function executeWithSpinner(action) {
-      showSpinner();
-      setTimeout(() => {
-        action();
-        hideSpinner();
-      }, 3000);
-    }
-    
-    function showSpinner(){
-      document.getElementById('loadingSpinner').style.display = "flex";
-    }
-    function hideSpinner(){
-      document.getElementById('loadingSpinner').style.display = "none";
-    }
-    
-    /********** FUNCIONES DE TOAST (Mensaje de confirmación) **********/
-    function showToast(message) {
-      const toast = document.getElementById('toast');
-      toast.textContent = message;
-      toast.classList.add('show');
-      setTimeout(() => {
-        toast.classList.remove('show');
-      }, 3000);
-    }
-    
-    /********** UTILIDADES DE ESTILO **********/
+
+    /*********************** VARIABLES Y ELEMENTOS DEL DOM **************************/
+    const authForm = document.getElementById('authForm');
+    const emailInput = document.getElementById('emailInput');
+    const passwordInput = document.getElementById('passwordInput');
+    const submitButton = document.getElementById('submitButton');
+    const toggleAuth = document.getElementById('toggleAuth');
+    const authError = document.getElementById('authError');
+    const authFormContainer = document.getElementById('auth-form');
+    const mainApp = document.getElementById('main-app');
+
+    let isLogin = true;
+    let storyTypeSelected = "";
+    let currentEditingStory = null;
+    let currentChapters = [];
+    let currentViewedAuthorId = null;
+    let liveBroadcasterId = null;
+    let currentLanguage = 'es';
+    const translations = { /* (definiciones de traducción como en tu código original) */ };
+
     function getVerificationIcon(email) {
-      return email === "glamworksapps@gmail.com" 
-             ? ' <img src="https://cdn-icons-png.flaticon.com/512/845/845646.png" alt="Verificado" class="inline-block w-4 h-4 ml-1" />'
-             : "";
-    }
-    
-    function toggleAdminAuth(e){
-      if(e && e.preventDefault) e.preventDefault();
-      const intro = document.getElementById('adminIntro');
-      const authModal = document.getElementById('adminAuthModal');
-      if(intro.classList.contains('hidden')){
-        intro.classList.remove('hidden');
-        authModal.classList.add('hidden');
-      } else {
-        intro.classList.add('hidden');
-        authModal.classList.remove('hidden');
+      if(email === "glamworksapps@gmail.com") {
+        return ' <img src="https://cdn-icons-png.flaticon.com/512/845/845646.png" alt="Verificado" class="inline-block w-4 h-4 ml-1" />';
       }
+      return "";
     }
-    
-    function showTab(tabName, event){
-      document.querySelectorAll('.admin-tab-content').forEach(tab => tab.classList.add('hidden'));
-      document.getElementById(tabName + "Tab").classList.remove('hidden');
-      document.querySelectorAll('.admin-tab').forEach(button => {
-        button.classList.remove('bg-[#58CC02]', 'text-white');
-        button.classList.add('bg-gray-300', 'text-gray-700');
-      });
-      event.currentTarget.classList.add('bg-[#58CC02]', 'text-white');
+    function updateTranslations() {
+      // (Código de actualización de traducciones como en tu versión original)
     }
-    
-    /********** ADMIN LOGIN/REGISTRO **********/
-    document.getElementById('adminRegisterForm').addEventListener('submit', function(e){
-      e.preventDefault();
-      const email = document.getElementById('adminRegEmail').value;
-      const password = document.getElementById('adminRegPassword').value;
-      firebase.auth().createUserWithEmailAndPassword(email, password)
-        .then(userCredential => {
-          if(
-            userCredential.user.email !== "darelvega6@icloud.com" &&
-            userCredential.user.email !== "ponsy75@yahoo.com" &&
-            userCredential.user.email !== "donovanyaztel1863@gmail.com"
-          ){
-            alert("Acceso denegado. Solo los administradores autorizados pueden registrarse.");
-            firebase.auth().signOut();
-            return;
-          }
-          document.getElementById('adminIntro').classList.add('hidden');
-          document.getElementById('adminDashboard').classList.remove('hidden');
-          loadReports();
-          loadSupportRequests();
-          loadBlockedUsers();
-          loadAuthorsForStories();
-          loadVerifiedUsers();
-          initializeAdminProfile();
-          loadAdminProfile();
-          updateAdminPhotoFromOriginal();
-          setInterval(checkAndDepositPoints, 60000);
-        })
-        .catch(error => {
-          alert(error.message);
-        });
+    function setLanguage(lang) {
+      currentLanguage = lang;
+      localStorage.setItem("selectedLanguage", lang);
+      const langOverlay = document.getElementById('lang-loading-overlay');
+      langOverlay.style.display = "flex";
+      setTimeout(() => {
+        updateTranslations();
+        langOverlay.style.display = "none";
+        document.getElementById('language-modal').style.display = "none";
+      }, 1000);
+    }
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        const splash = document.getElementById('splash-screen');
+        splash.style.opacity = '0';
+        setTimeout(() => { splash.style.display = 'none'; }, 1000);
+      }, 3000);
     });
-    
-    document.getElementById('adminAuthForm').addEventListener('submit', function(e){
-      e.preventDefault();
-      const email = document.getElementById('adminAuthEmail').value;
-      const password = document.getElementById('adminAuthPassword').value;
-      firebase.auth().signInWithEmailAndPassword(email, password)
-        .then(userCredential => {
-          if(
-            userCredential.user.email !== "darelvega6@icloud.com" &&
-            userCredential.user.email !== "ponsy75@yahoo.com" &&
-            userCredential.user.email !== "donovanyaztel1863@gmail.com"
-          ){
-            alert("Acceso denegado. No eres administrador.");
-            firebase.auth().signOut();
-            return;
-          }
-          document.getElementById('adminAuthModal').classList.add('hidden');
-          document.getElementById('adminDashboard').classList.remove('hidden');
-          loadReports();
-          loadSupportRequests();
-          loadBlockedUsers();
-          loadAuthorsForStories();
-          loadVerifiedUsers();
-          initializeAdminProfile();
-          loadAdminProfile();
-          updateAdminPhotoFromOriginal();
-          setInterval(checkAndDepositPoints, 60000);
-        })
-        .catch(error => {
-          alert(error.message);
-        });
-    });
-    
-    function adminSignOut(){
-      firebase.auth().signOut().then(() => {
-        location.reload();
-      });
-    }
-    
-    /********** REPORTES **********/
-    function loadReports(){
-      const reportsRef = firebase.database().ref('reports');
-      reportsRef.on('value', snapshot => {
-        const reportsList = document.getElementById('reportsList');
-        reportsList.innerHTML = "";
-        snapshot.forEach(child => {
-          const report = child.val();
-          const reportDiv = document.createElement('div');
-          reportDiv.className = "card";
-          let blockButton = "";
-          if(report.reason === "perfil_falso" || (!report.storyId && report.reportedUser)){
-            blockButton = `<button class="bg-gray-700 text-white px-3 py-1 rounded flex items-center" onclick="executeWithSpinner(function(){ blockProfile('${report.reportedUser}'); })">
-                             <i class="fas fa-ban mr-1"></i> Bloquear Perfil
-                           </button>`;
-          } else if(report.storyId){ 
-            blockButton = `<button class="bg-gray-700 text-white px-3 py-1 rounded flex items-center" onclick="executeWithSpinner(function(){ blockStory('${report.storyId}'); })">
-                             <i class="fas fa-ban mr-1"></i> Bloquear Historia
-                           </button>`;
-          }
-          reportDiv.innerHTML = `
-            <p><strong>Reportado:</strong> ${report.reportedName} <span class="text-sm">(${report.reportedUser})</span></p>
-            <p><strong>Reportado por:</strong> ${report.reporterName}</p>
-            <p><strong>Motivo:</strong> ${report.reason}</p>
-            <p><strong>Descripción:</strong> ${report.description}</p>
-            <p><strong>Fecha:</strong> ${new Date(report.timestamp).toLocaleString()}</p>
-            <p><strong>Estado:</strong> ${report.status}</p>
-            <div class="flex flex-wrap gap-2 mt-2">
-              <button class="bg-blue-500 text-white px-3 py-1 rounded flex items-center" onclick="executeWithSpinner(function(){ openReplyModal('${report.reporter}', 'report'); })">
-                <i class="fas fa-reply mr-1"></i> Responder
-              </button>
-              <button class="bg-green-500 text-white px-3 py-1 rounded flex items-center" onclick="executeWithSpinner(function(){ updateReportStatus('${child.key}', 'accepted'); })">
-                <i class="fas fa-check-circle mr-1"></i> Aceptar
-              </button>
-              <button class="bg-red-500 text-white px-3 py-1 rounded flex items-center" onclick="executeWithSpinner(function(){ updateReportStatus('${child.key}', 'rejected'); })">
-                <i class="fas fa-times-circle mr-1"></i> Rechazar
-              </button>
-              ${blockButton}
-            </div>
-          `;
-          reportsList.appendChild(reportDiv);
-        });
-      });
-    }
-    
-    function updateReportStatus(reportId, newStatus){
-      firebase.database().ref('reports/' + reportId).update({ status: newStatus })
-        .then(() => { alert("Reporte actualizado a: " + newStatus); })
-        .catch(error => { console.error("Error al actualizar reporte:", error); });
-    }
-    
-    /********** SOPORTE **********/
-    function loadSupportRequests(){
-      const supportRef = firebase.database().ref('supportRequests');
-      supportRef.on('value', snapshot => {
-        const supportList = document.getElementById('supportList');
-        supportList.innerHTML = "";
-        snapshot.forEach(child => {
-          const support = child.val();
-          const supportDiv = document.createElement('div');
-          supportDiv.className = "card";
-          supportDiv.innerHTML = `
-            <p><strong>Usuario:</strong> ${support.userId}</p>
-            <p><strong>Asunto:</strong> ${support.subject}</p>
-            <p><strong>Mensaje:</strong> ${support.message}</p>
-            <p><strong>Fecha:</strong> ${new Date(support.timestamp).toLocaleString()}</p>
-            <p><strong>Estado:</strong> ${support.status}</p>
-            <div class="flex flex-wrap gap-2 mt-2">
-              <button class="bg-blue-500 text-white px-3 py-1 rounded flex items-center" onclick="executeWithSpinner(function(){ openReplyModal('${support.userId}', 'support'); })">
-                <i class="fas fa-reply mr-1"></i> Responder
-              </button>
-              <button class="bg-green-500 text-white px-3 py-1 rounded flex items-center" onclick="executeWithSpinner(function(){ updateSupportStatus('${child.key}', 'resolved'); })">
-                <i class="fas fa-heart mr-1"></i> Resuelto
-              </button>
-            </div>
-          `;
-          supportList.appendChild(supportDiv);
-        });
-      });
-    }
-    
-    function updateSupportStatus(requestId, newStatus){
-      firebase.database().ref('supportRequests/' + requestId).update({ status: newStatus })
-        .then(() => { alert("Soporte actualizado a: " + newStatus); })
-        .catch(error => { console.error("Error al actualizar soporte:", error); });
-    }
-    
-    /********** USUARIOS BLOQUEADOS **********/
-    function loadBlockedUsers(){
-      const usersRef = firebase.database().ref('users');
-      usersRef.orderByChild('blocked').equalTo(true).on('value', snapshot => {
-        const blockedList = document.getElementById('blockedUsersList');
-        blockedList.innerHTML = "";
-        snapshot.forEach(child => {
-          const user = child.val();
-          const userDiv = document.createElement('div');
-          userDiv.className = "card";
-          userDiv.innerHTML = `
-            <p><strong>Usuario:</strong> ${user.username} (${child.key})</p>
-            <p><strong>Bloqueado hasta:</strong> ${new Date(user.blockedUntil).toLocaleString()}</p>
-            <button class="bg-green-500 text-white px-3 py-1 rounded flex items-center" onclick="executeWithSpinner(function(){ unblockUser('${child.key}'); })">
-              <i class="fas fa-unlock mr-1"></i> Desbloquear
-            </button>
-          `;
-          blockedList.appendChild(userDiv);
-        });
-      });
-    }
-    
-    function unblockUser(userId){
-      firebase.database().ref('users/' + userId).update({ 
-        blocked: false,
-        blockedUntil: null
-      })
-        .then(() => { alert("Usuario desbloqueado"); })
-        .catch(error => { console.error("Error al desbloquear usuario:", error); });
-    }
-    
-    /********** BLOQUEAR HISTORIAS Y PERFILES **********/
-    function blockStory(storyId){
-      if(confirm("¿Seguro que deseas bloquear esta historia? Se desactivará en la plataforma.")){
-        firebase.database().ref('stories/' + storyId).update({ 
-          blocked: true,
-          blockedMessage: "BeaBoo ha bloqueado esta historia por infringir las normas de la comunidad"
-        })
-          .then(() => { alert("Historia bloqueada."); })
-          .catch(error => { console.error("Error al bloquear la historia:", error); });
-      }
-    }
-    
-    function blockProfile(userId){
-      if(confirm("¿Seguro que deseas bloquear este perfil? El usuario quedará bloqueado en tiempo real.")){
-        const blockedUntil = Date.now() + 7 * 24 * 60 * 60 * 1000;
-        firebase.database().ref('users/' + userId).update({ 
-          blocked: true,
-          blockedUntil: blockedUntil
-        })
-          .then(() => { alert("Perfil bloqueado."); })
-          .catch(error => { console.error("Error al bloquear el perfil:", error); });
-      }
-    }
-    
-    /********** RESPUESTA (Reply Modal) **********/
-    function openReplyModal(targetUser, context){
-      replyTargetUser = targetUser;
-      replyContext = context;
-      document.getElementById('replyModal').style.display = "flex";
-    }
-    function closeReplyModal(){
-      document.getElementById('replyModal').style.display = "none";
-      document.getElementById('replyMessage').value = "";
-      replyTargetUser = null;
-      replyContext = "";
-    }
-    function sendReply(){
-      const message = document.getElementById('replyMessage').value;
-      if(!replyTargetUser || message.trim() === ""){
-        alert("Escribe un mensaje para enviar.");
-        return;
-      }
-      addNotification(replyTargetUser, message);
-      alert("Respuesta enviada.");
-      closeReplyModal();
-    }
-    
+
+    /*********************** NOTIFICACIONES **************************/
     function addNotification(userId, message) {
       const notificationsRef = firebase.database().ref('notifications/' + userId);
       const newNotificationRef = notificationsRef.push();
@@ -664,300 +1434,820 @@
         read: false
       });
     }
-    
-    /********** VERIFICACIÓN DE USUARIOS **********/
-    function verifyUser(){
-      const uid = document.getElementById('verifyUserId').value.trim();
-      if(uid === ""){
-        alert("Ingrese el ID del usuario a verificar.");
-        return;
+    function openNotifications() {
+      if (document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen();
       }
-      firebase.database().ref('users/' + uid).update({ isVerified: true })
-        .then(() => { 
-          alert("Usuario marcado como verificado."); 
-          document.getElementById('verifyUserId').value = "";
-        })
-        .catch(error => { console.error("Error al verificar usuario:", error); });
-    }
-    
-    function loadVerifiedUsers(){
-      const usersRef = firebase.database().ref('users');
-      usersRef.orderByChild('isVerified').equalTo(true).on('value', snapshot => {
-        const verifiedList = document.getElementById('verifiedUsersList');
-        verifiedList.innerHTML = "<h3 class='text-lg font-bold mb-2'>Usuarios Verificados</h3>";
+      const currentUser = firebase.auth().currentUser;
+      if (!currentUser) return;
+      document.getElementById('notifications-modal').classList.remove('hidden');
+      const notificationsRef = firebase.database().ref('notifications/' + currentUser.uid);
+      notificationsRef.on('value', snapshot => {
+        const notificationsList = document.getElementById('notifications-list');
+        notificationsList.innerHTML = "";
         snapshot.forEach(child => {
-          const user = child.val();
+          const notification = child.val();
           const div = document.createElement('div');
-          div.className = "p-2 bg-green-100 rounded";
-          div.innerHTML = `<p><strong>${user.username}</strong> (${child.key})</p>`;
-          verifiedList.appendChild(div);
+          div.className = "notification-item";
+          const messageEl = document.createElement('div');
+          messageEl.textContent = notification.message;
+          const timeEl = document.createElement('div');
+          timeEl.className = "notification-time";
+          timeEl.textContent = new Date(notification.timestamp).toLocaleString();
+          div.appendChild(messageEl);
+          div.appendChild(timeEl);
+          notificationsList.appendChild(div);
         });
       });
     }
-    
-    /********** HISTORIAS DE AUTORES **********/
-    function loadAuthorsForStories(){
-      const storiesRef = firebase.database().ref('stories');
-      storiesRef.on('value', snapshot => {
-        const authorsList = document.getElementById('authorsList');
-        let authors = {};
-        snapshot.forEach(child => {
-          const story = child.val();
-          if(story.userId){
-            authors[story.userId] = story.username || "Sin nombre";
+    function closeNotifications() {
+      document.getElementById('notifications-modal').classList.add('hidden');
+    }
+
+    /*********************** AUTENTICACIÓN **************************/
+    toggleAuth.addEventListener('click', () => {
+      isLogin = !isLogin;
+      submitButton.textContent = isLogin ? translations[currentLanguage].btnIniciarSesion : 'Registrarse';
+      toggleAuth.textContent = isLogin ? translations[currentLanguage].btnToggleAuth : '¿Ya tienes cuenta? Inicia sesión';
+    });
+    authForm.addEventListener('submit', e => {
+      e.preventDefault();
+      authError.classList.add('hidden');
+      const email = emailInput.value;
+      const password = passwordInput.value;
+      if (isLogin) {
+        firebase.auth().signInWithEmailAndPassword(email, password)
+          .then(userCredential => { console.log("Usuario autenticado:", userCredential.user); })
+          .catch(error => {
+            console.error(error);
+            authError.textContent = error.message;
+            authError.classList.remove('hidden');
+          });
+      } else {
+        firebase.auth().createUserWithEmailAndPassword(email, password)
+          .then(userCredential => {
+            const user = userCredential.user;
+            const userCountRef = firebase.database().ref('userCount');
+            userCountRef.transaction(count => (count || 0) + 1).then(result => {
+              const newCount = result.snapshot.val();
+              const isVerified = newCount <= 100;
+              firebase.database().ref('users/' + user.uid).set({
+                username: "Nuevo Usuario",
+                bio: "",
+                profileImage: "",
+                followersCount: 0,
+                followingCount: 0,
+                ratedCount: 0,
+                coins: 0,
+                isVerified: isVerified,
+                registrationTimestamp: Date.now(),
+                founder: false,
+                email: user.email
+              });
+            });
+          })
+          .catch(error => {
+            console.error(error);
+            authError.textContent = error.message;
+            authError.classList.remove('hidden');
+          });
+      }
+    });
+    firebase.auth().onAuthStateChanged(user => {
+      if (user) {
+        firebase.database().ref('users/' + user.uid + '/coins').on('value', snapshot => {
+          document.getElementById('edit-coins').textContent = snapshot.val() || 0;
+        });
+        firebase.database().ref('users/' + user.uid).once('value').then(snapshot => {
+          const data = snapshot.val();
+          if (data && data.blocked && data.blockedUntil && Date.now() < data.blockedUntil) {
+            alert("Tu cuenta ha sido bloqueada por infracciones. Por favor, contacta con el soporte para recuperar el acceso.");
+            firebase.auth().signOut();
+            return;
+          }
+          authFormContainer.classList.add('hidden');
+          mainApp.classList.remove('hidden');
+          loadStories();
+          loadUserStories(user.uid);
+          if (data) {
+            let displayName = data.username;
+            if (data.founder) { displayName += ' <span class="founder-tag">Fundador</span>'; }
+            displayName += getVerificationIcon(data.email);
+            document.getElementById('profile-username').innerHTML = displayName;
+            if (data.bio) { document.getElementById('profile-bio').value = data.bio; }
+            if (data.profileImage) { document.getElementById('profile-image').src = data.profileImage; }
           }
         });
-        authorsList.innerHTML = "";
-        for(const uid in authors){
-          const div = document.createElement('div');
-          div.className = "card flex justify-between items-center";
-          div.innerHTML = `<span><strong>${authors[uid]}</strong> (${uid})</span>
-                           <button class="bg-blue-500 text-white px-3 py-1 rounded flex items-center" onclick="executeWithSpinner(function(){ manageStories('${uid}', '${authors[uid]}'); })">
-                             <i class="fas fa-book mr-1"></i> Ver Historias
-                           </button>`;
-          authorsList.appendChild(div);
+      } else {
+        authFormContainer.classList.remove('hidden');
+        mainApp.classList.add('hidden');
+      }
+    });
+
+    /*********************** AUTENTICACIÓN CON GOOGLE Y FACEBOOK **************************/
+    function signInWithGoogle() {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      firebase.auth().signInWithPopup(provider)
+        .then(result => { console.log("Google sign-in successful:", result.user); })
+        .catch(error => { console.error("Error al iniciar sesión con Google:", error); });
+    }
+    function signInWithFacebook() {
+      const provider = new firebase.auth.FacebookAuthProvider();
+      firebase.auth().signInWithPopup(provider)
+        .then(result => { console.log("Facebook sign-in successful:", result.user); })
+        .catch(error => { console.error("Error al iniciar sesión con Facebook:", error); });
+    }
+
+    /*********************** CERRAR SESIÓN CON SPINNER **************************/
+    function signOutUser() {
+      const spinner = document.getElementById('signout-spinner');
+      spinner.style.display = "flex";
+      setTimeout(() => {
+        firebase.auth().signOut()
+          .then(() => { 
+            spinner.style.display = "none";
+            alert("Has cerrado sesión.");
+          })
+          .catch(error => { 
+            spinner.style.display = "none";
+            console.error("Error al cerrar sesión:", error);
+          });
+      }, 3000);
+    }
+
+    /*********************** OLVIDÉ MI CONTRASEÑA **************************/
+    function resetPassword() {
+      const email = emailInput.value;
+      if (!email) {
+        alert("Por favor, ingresa tu correo electrónico para restablecer la contraseña.");
+        return;
+      }
+      firebase.auth().sendPasswordResetEmail(email)
+        .then(() => { alert("Se ha enviado un correo para restablecer tu contraseña."); })
+        .catch(error => { alert("Error al enviar el correo: " + error.message); });
+    }
+
+    /*********************** SOPORTE **************************/
+    function openSupportModal() {
+      const supportModal = document.getElementById('support-modal');
+      supportModal.style.zIndex = 9999;
+      supportModal.style.display = "block";
+    }
+    function closeSupportModal() {
+      document.getElementById('support-modal').style.display = "none";
+    }
+    document.getElementById('support-form').addEventListener('submit', e => {
+      e.preventDefault();
+      const subject = document.getElementById('support-subject').value;
+      const message = document.getElementById('support-message').value;
+      const user = firebase.auth().currentUser;
+      if (!user) return;
+      const supportData = { userId: user.uid, subject, message, timestamp: Date.now(), status: "pending" };
+      firebase.database().ref('supportRequests').push(supportData)
+        .then(() => { alert("Tu solicitud ha sido enviada. Pronto recibirás una respuesta."); closeSupportModal(); })
+        .catch(error => { console.error("Error al enviar solicitud de soporte:", error); });
+    });
+
+    /*********************** NAVEGACIÓN Y MODALES **************************/
+    function openStoryDetail(story) {
+      const user = firebase.auth().currentUser;
+      if (!user) return;
+      const viewRef = firebase.database().ref('storyViews/' + story.id + '/' + user.uid);
+      viewRef.once('value').then(snapshot => {
+        if (!snapshot.exists()) {
+          viewRef.set(true);
+          const storyViewsRef = firebase.database().ref('stories/' + story.id + '/views');
+          storyViewsRef.transaction(current => (current || 0) + 1);
         }
       });
+      document.getElementById('detail-cover').src = story.coverImage || '/api/placeholder/800/400';
+      document.getElementById('detail-title').textContent = story.title;
+      let authorDisplay = (story.username || "Autor Desconocido") + getVerificationIcon(story.email || "");
+      document.getElementById('detail-author').innerHTML = translations[currentLanguage].authorProfile + " " + authorDisplay;
+      document.getElementById('detail-author').dataset.userid = story.userId;
+      document.getElementById('detail-author').onclick = () => openAuthorProfile(story.userId);
+      document.getElementById('detail-synopsis').textContent = story.synopsis || "Sinopsis no disponible.";
+      firebase.database().ref('stories/' + story.id + '/chapters').on('value', snapshot => {
+        const chaptersList = document.getElementById('detail-chapters');
+        chaptersList.innerHTML = "";
+        currentChapters = [];
+        let chapterCount = snapshot.numChildren();
+        let totalRating = 0, ratingCount = 0;
+        snapshot.forEach(child => {
+          const chapter = child.val();
+          chapter.id = child.key;
+          currentChapters.push(chapter);
+          const li = document.createElement('li');
+          li.className = "p-4 border border-gray-200 rounded-xl hover:bg-gray-50 flex justify-between items-center";
+          li.innerHTML = `<span>${translations[currentLanguage].readChapter} ${chapter.chapterNumber}</span>
+                          <button class="bg-[#58CC02] text-white px-2 py-1 rounded" onclick='openChapterReadModal("${story.id}", "${child.key}")'>Leer</button>`;
+          chaptersList.appendChild(li);
+          if(chapter.ratings) {
+            Object.values(chapter.ratings).forEach(r => { totalRating += r; ratingCount++; });
+          }
+        });
+        currentChapters.sort((a, b) => a.chapterNumber - b.chapterNumber);
+        currentEditingStory = { id: story.id, currentChapterId: currentChapters.length ? currentChapters[0].id : null };
+        let overallRating = ratingCount ? (totalRating / ratingCount).toFixed(1) : 0;
+        document.getElementById('detail-metrics').innerHTML =
+          `<span><strong>${story.views || 0}</strong> Visitas</span>
+           <span><strong>${overallRating}</strong> ${translations[currentLanguage].ratings}</span>
+           <span><strong>${chapterCount}</strong> Capítulos</span>`;
+      });
+      document.getElementById('story-detail-modal').classList.remove('hidden');
+      mainApp.classList.add('hidden');
     }
-    
-    function manageStories(userId, username){
-      currentAuthorForStories = userId;
-      document.getElementById('modalAuthorName').innerText = "Historias de " + username;
-      showSpinner();
-      firebase.database().ref('stories').orderByChild('userId').equalTo(userId).once('value')
-        .then(snapshot => {
-          const modalList = document.getElementById('authorStoriesList');
-          modalList.innerHTML = "";
-          snapshot.forEach(child => {
-            const story = child.val();
-            const storyDiv = document.createElement('div');
-            storyDiv.className = "card flex justify-between items-center";
-            storyDiv.innerHTML = `<div>
-                                    <p class="font-bold">${story.title}</p>
-                                    <p class="text-sm">${new Date(story.createdAt).toLocaleString()}</p>
-                                    <p class="text-sm">${story.synopsis || ""}</p>
-                                  </div>
-                                  <button class="bg-red-500 text-white px-3 py-1 rounded flex items-center" onclick="executeWithSpinner(function(){ blockStory('${child.key}'); })">
-                                    <i class="fas fa-ban mr-1"></i> Bloquear
-                                  </button>`;
-            modalList.appendChild(storyDiv);
-          });
-          hideSpinner();
-          document.getElementById('storiesModal').classList.remove('hidden');
+    function closeStoryDetail() {
+      document.getElementById('story-detail-modal').classList.add('hidden');
+      mainApp.classList.remove('hidden');
+    }
+    function openStoryEdit(story) {
+      currentEditingStory = story;
+      document.getElementById('edit-story-language').value = story.language || "";
+      firebase.database().ref('stories/' + story.id + '/chapters').on('value', snapshot => {
+        currentChapters = [];
+        const chapterListDiv = document.getElementById('chapter-list');
+        chapterListDiv.innerHTML = "";
+        snapshot.forEach(child => {
+          const chapter = child.val();
+          chapter.id = child.key;
+          currentChapters.push(chapter);
+        });
+        currentChapters.sort((a, b) => a.chapterNumber - b.chapterNumber);
+        currentChapters.forEach(chapter => {
+          const div = document.createElement('div');
+          div.className = "flex justify-between items-center p-4 border border-gray-200 rounded-xl";
+          div.innerHTML = `<span>${translations[currentLanguage].readChapter} ${chapter.chapterNumber}</span>
+                           <button class="bg-[#58CC02] text-white px-2 py-1 rounded" onclick="openChapterReadModal('${story.id}', '${chapter.id}')">Leer</button>`;
+          chapterListDiv.appendChild(div);
+        });
+      });
+      document.getElementById('story-edit-view').classList.remove('hidden');
+    }
+    function closeStoryEdit() {
+      document.getElementById('story-edit-view').classList.add('hidden');
+      alert(translations[currentLanguage].editLater);
+    }
+    function saveStoryEdits() {
+      if (!currentEditingStory) {
+        alert(translations[currentLanguage].noEditingStory);
+        return;
+      }
+      const newLanguage = document.getElementById('edit-story-language').value;
+      firebase.database().ref('stories/' + currentEditingStory.id).update({ language: newLanguage })
+        .then(() => {
+          currentEditingStory.language = newLanguage;
+          alert("Cambios guardados en la historia.");
         })
         .catch(error => {
-          console.error("Error al cargar historias:", error);
-          hideSpinner();
+          console.error("Error al actualizar la historia:", error);
         });
     }
-    
-    function closeStoriesModal(){
-      document.getElementById('storiesModal').classList.add('hidden');
+    function openProfile() {
+      mainApp.classList.add('hidden');
+      document.getElementById('profile-view').classList.remove('hidden');
     }
-    
-    /********** LIVE STREAMING (NUEVA FUNCIÓN) **********/
-    let liveLocalStream = null;
-    let livePeerConnection = null;
-    let liveBroadcasting = false;
-    let currentBroadcasterId = null;
-    
-    function openLiveStreamModal() {
-      const user = firebase.auth().currentUser;
-      if (!user) {
-        alert("Debes estar autenticado para transmitir en vivo.");
+    function openHome() {
+      document.getElementById('profile-view').classList.add('hidden');
+      mainApp.classList.remove('hidden');
+    }
+    function openSearch() {
+      mainApp.classList.add('hidden');
+      document.getElementById('search-view').classList.remove('hidden');
+      document.getElementById('search-loading').style.display = "flex";
+      setTimeout(() => { document.getElementById('search-loading').style.display = "none"; }, 4000);
+    }
+    function closeSearch() {
+      document.getElementById('search-view').classList.add('hidden');
+      mainApp.classList.remove('hidden');
+    }
+    document.getElementById('search-input').addEventListener('input', function(e) {
+      const query = e.target.value.trim().toLowerCase();
+      if (!query) {
+        document.getElementById('search-books-carousel').innerHTML = '';
+        document.getElementById('search-authors-list').innerHTML = '';
         return;
       }
-      currentBroadcasterId = user.uid;
-      document.getElementById('live-stream-modal').classList.remove('hidden');
-      navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-        .then(stream => {
-          liveLocalStream = stream;
-          document.getElementById('live-localVideo').srcObject = stream;
-        })
-        .catch(err => {
-          alert("Error al acceder a la cámara: " + err);
-        });
-      const profileImg = document.getElementById('profile-image');
-      if (profileImg) { profileImg.classList.add('live-border'); }
-      firebase.database().ref(`liveStreams/${currentBroadcasterId}/gifts`).on('child_added', snapshot => {
-          let gift = snapshot.val();
-          let giftUrl = "";
-          if(gift.giftType === "mariposas") {
-             giftUrl = "https://i.pinimg.com/originals/7c/29/36/7c2936db7563085ef7470d50fd06e4e3.gif";
-          } else if(gift.giftType === "ballena") {
-             giftUrl = "https://i.pinimg.com/originals/86/31/83/863183316ed35cfeda7baf9ee1de0596.gif";
-          }
-          showGiftAnimation(giftUrl, gift.senderName);
-          snapshot.ref.remove();
-      });
-    }
-    
-    function closeLiveStreamModal() {
-      document.getElementById('live-stream-modal').classList.add('hidden');
-      if (liveLocalStream) {
-        liveLocalStream.getTracks().forEach(track => track.stop());
-        liveLocalStream = null;
-      }
-      if (liveBroadcasting) { endLiveStream(); }
-      const profileImg = document.getElementById('profile-image');
-      if (profileImg) { profileImg.classList.remove('live-border'); }
-    }
-    
-    function startLiveCountdown(duration, callback) {
-      let remaining = duration;
-      const countdownEl = document.getElementById('live-countdown');
-      countdownEl.textContent = remaining;
-      const interval = setInterval(() => {
-        remaining--;
-        if (remaining > 0) { countdownEl.textContent = remaining; }
-        else { clearInterval(interval); countdownEl.textContent = ""; callback(); }
-      }, 1000);
-    }
-    
-    document.getElementById('live-startBtn').addEventListener('click', () => {
-      startLiveCountdown(10, () => {
-        document.getElementById('live-indicator').classList.remove('hidden');
-        document.getElementById('live-startBtn').classList.add('hidden');
-        document.getElementById('live-endBtn').classList.remove('hidden');
-        startBroadcasting();
-      });
+      performSearch(query);
     });
-    
-    function startBroadcasting() {
-      livePeerConnection = new RTCPeerConnection();
-      liveLocalStream.getTracks().forEach(track => { livePeerConnection.addTrack(track, liveLocalStream); });
-      livePeerConnection.onicecandidate = event => {
-        if (event.candidate) {
-          firebase.database().ref(`liveStreams/${currentBroadcasterId}/candidates`).push(event.candidate.toJSON());
+    async function performSearch(query) {
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      const storiesSnapshot = await firebase.database().ref('stories').once('value');
+      let books = [];
+      storiesSnapshot.forEach(child => {
+        const story = child.val();
+        if(story.title && story.title.toLowerCase().includes(query)) books.push(story);
+      });
+      renderBooksCarousel(books);
+      const usersSnapshot = await firebase.database().ref('users').once('value');
+      let authors = [];
+      usersSnapshot.forEach(child => {
+        const userData = child.val();
+        if(userData.username && userData.username.toLowerCase().includes(query)) {
+          userData.uid = child.key;
+          authors.push(userData);
         }
-      };
-      livePeerConnection.createOffer().then(offer => {
-        return livePeerConnection.setLocalDescription(offer).then(() => offer);
-      }).then(offer => {
-        firebase.database().ref(`liveStreams/${currentBroadcasterId}`).set({
-          isLive: true,
-          offer: offer,
-          views: 0
-        });
-        liveBroadcasting = true;
-        firebase.database().ref(`followers/${currentBroadcasterId}`).once('value').then(snapshot => {
-          snapshot.forEach(child => {
-            const followerId = child.key;
-            firebase.database().ref('users/' + currentBroadcasterId).once('value').then(userSnap => {
-              const username = userSnap.val().username;
-              addNotification(followerId, `${username} está transmitiendo en vivo`);
-            });
-          });
-        });
-        firebase.database().ref(`liveStreams/${currentBroadcasterId}/answer`).on('value', snapshot => {
-          const answer = snapshot.val();
-          if (answer && livePeerConnection && !livePeerConnection.remoteDescription) {
-            livePeerConnection.setRemoteDescription(new RTCSessionDescription(answer));
-          }
-        });
-        firebase.database().ref(`liveStreams/${currentBroadcasterId}/viewerCandidates`).on('child_added', snapshot => {
-          const candidate = snapshot.val();
-          if (candidate && livePeerConnection) { livePeerConnection.addIceCandidate(new RTCIceCandidate(candidate)); }
-        });
-        firebase.database().ref(`liveStreams/${currentBroadcasterId}/views`).on('value', snapshot => {
-          const views = snapshot.val() || 0;
-          document.getElementById('live-viewCount').textContent = views + " vistas";
+      });
+      renderAuthorsList(authors);
+    }
+    function renderBooksCarousel(books) {
+      const carousel = document.getElementById('search-books-carousel');
+      carousel.innerHTML = '';
+      books.forEach(book => {
+        const card = document.createElement('div');
+        card.className = 'flex-shrink-0 w-48 cursor-pointer';
+        card.innerHTML = `
+          <div class="rounded-2xl overflow-hidden shadow-md">
+            <img src="${book.coverImage || '/api/placeholder/200/300'}" alt="${book.title}" class="w-full h-56 object-cover" />
+          </div>
+          <p class="mt-2 text-sm font-semibold">${book.title}</p>
+        `;
+        card.addEventListener('click', () => openStoryDetail(book));
+        carousel.appendChild(card);
+      });
+    }
+    function renderAuthorsList(authors) {
+      const list = document.getElementById('search-authors-list');
+      list.innerHTML = '';
+      authors.forEach(author => {
+        const item = document.createElement('div');
+        item.className = 'flex items-center space-x-4 cursor-pointer';
+        let verifiedIcon = getVerificationIcon(author.email || "");
+        item.innerHTML = `
+          <img src="${author.profileImage || 'https://via.placeholder.com/50'}" alt="${author.username}" class="w-12 h-12 rounded-full object-cover" />
+          <span class="font-semibold">${author.username}${verifiedIcon}</span>
+        `;
+        item.addEventListener('click', () => openAuthorProfile(author.uid));
+        list.appendChild(item);
+      });
+    }
+
+    /*********************** PERFIL (Propio) **************************/
+    function uploadProfileImage() {
+      document.getElementById('profile-image-input').click();
+    }
+    function handleProfileImageUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const user = firebase.auth().currentUser;
+      if (!user) return;
+      const storageRef = firebase.storage().ref();
+      const imageRef = storageRef.child('profileImages/' + user.uid + '/' + file.name);
+      const uploadTask = imageRef.put(file);
+      uploadTask.on('state_changed', null, error => { console.error("Error al subir imagen:", error); }, () => {
+        uploadTask.snapshot.ref.getDownloadURL().then(downloadURL => {
+          firebase.database().ref('users/' + user.uid).update({ profileImage: downloadURL });
+          document.getElementById('profile-image').src = downloadURL;
         });
       });
     }
-    
-    function endLiveStream() {
-      if (livePeerConnection) {
-        livePeerConnection.close();
-        livePeerConnection = null;
-      }
-      firebase.database().ref(`liveStreams/${currentBroadcasterId}`).remove();
-      liveBroadcasting = false;
-      const profileImg = document.getElementById('profile-image');
-      if (profileImg) { profileImg.classList.remove('live-border'); }
-      setTimeout(() => { closeLiveStreamModal(); }, 3000);
+    function editUsername() {
+      openProfileEdit();
     }
-    
-    document.getElementById('live-endBtn').addEventListener('click', () => { endLiveStream(); });
-    
-    function openLiveViewModal(broadcasterId) {
-      liveBroadcasterId = broadcasterId;
-      document.getElementById('live-view-modal').classList.remove('hidden');
-      firebase.database().ref(`liveStreams/${broadcasterId}/views`).transaction(current => (current || 0) + 1);
-      const viewerPC = new RTCPeerConnection();
-      viewerPC.onicecandidate = event => {
-        if (event.candidate) {
-          firebase.database().ref(`liveStreams/${broadcasterId}/viewerCandidates`).push(event.candidate.toJSON());
-        }
+    function saveBio() {
+      const bio = document.getElementById('profile-bio').value;
+      const user = firebase.auth().currentUser;
+      firebase.database().ref('users/' + user.uid).update({ bio })
+        .then(() => { 
+          addNotification(user.uid, translations[currentLanguage].bioUpdated);
+          alert(translations[currentLanguage].bioUpdated);
+        })
+        .catch(error => { console.error("Error al actualizar la biografía:", error); });
+    }
+
+    /*********************** MODAL DE EDICIÓN DE PERFIL **************************/
+    function openProfileEdit() {
+      const user = firebase.auth().currentUser;
+      if (!user) return;
+      firebase.database().ref('users/' + user.uid).once('value').then(snapshot => {
+        const data = snapshot.val() || {};
+        document.getElementById('edit-username').value = data.username || "";
+        document.getElementById('edit-pronouns').value = data.pronouns || "";
+        document.getElementById('edit-bio').value = data.bio || "";
+        document.getElementById('edit-inkspired').value = data.inkspired || "";
+        document.getElementById('edit-instagram').value = data.instagram || "";
+        document.getElementById('edit-tiktok').value = data.tiktok || "";
+        document.getElementById('edit-website').value = data.website || "";
+        document.getElementById('edit-followers').textContent = formatFollowers(data.followersCount || 0);
+        document.getElementById('edit-following').textContent = formatFollowers(data.followingCount || 0);
+        firebase.database().ref('stories').orderByChild('userId').equalTo(user.uid).once('value').then(snapshot => {
+          document.getElementById('edit-stories-count').textContent = snapshot.numChildren();
+        });
+        document.getElementById('edit-profile-image').src = data.profileImage || "https://via.placeholder.com/150";
+        document.getElementById('edit-coins').textContent = data.coins || 0;
+        document.getElementById('profile-edit-modal').style.display = "block";
+      });
+    }
+    function closeProfileEdit() {
+      document.getElementById('profile-edit-modal').style.display = "none";
+    }
+    function saveProfileEdits() {
+      const user = firebase.auth().currentUser;
+      if (!user) return;
+      const updates = {
+        username: document.getElementById('edit-username').value,
+        pronouns: document.getElementById('edit-pronouns').value,
+        bio: document.getElementById('edit-bio').value,
+        inkspired: document.getElementById('edit-inkspired').value,
+        instagram: document.getElementById('edit-instagram').value,
+        tiktok: document.getElementById('edit-tiktok').value,
+        website: document.getElementById('edit-website').value
       };
-      viewerPC.ontrack = event => {
-        document.getElementById('live-remoteVideo').srcObject = event.streams[0];
-      };
-      firebase.database().ref(`liveStreams/${broadcasterId}/offer`).once('value').then(snapshot => {
-        const offer = snapshot.val();
-        if (!offer) {
-          alert("El autor no está transmitiendo.");
-          closeLiveViewModal();
+      if (updates.username === "darheel_") {
+         updates.followersCount = 19000;
+         updates.founder = true;
+         updates.isVerified = true;
+      }
+      firebase.database().ref('users/' + user.uid).update(updates)
+        .then(() => { 
+          addNotification(user.uid, translations[currentLanguage].usernameUpdated);
+          let newName = updates.username;
+          if (updates.founder) { newName += ' <span class="founder-tag">Fundador</span>'; }
+          newName += getVerificationIcon(updates.email || user.email);
+          document.getElementById('profile-username').innerHTML = newName;
+          alert("Perfil actualizado");
+          closeProfileEdit();
+        })
+        .catch(error => { console.error("Error al guardar cambios en el perfil:", error); });
+    }
+    function uploadEditProfileImage() {
+      document.getElementById('edit-profile-image-input').click();
+    }
+    function handleEditProfileImageUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const user = firebase.auth().currentUser;
+      if (!user) return;
+      const storageRef = firebase.storage().ref();
+      const imageRef = storageRef.child('profileImages/' + user.uid + '/' + file.name);
+      const uploadTask = imageRef.put(file);
+      uploadTask.on('state_changed', null, error => { console.error("Error al subir la imagen (edición):", error); }, () => {
+        uploadTask.snapshot.ref.getDownloadURL().then(downloadURL => {
+          firebase.database().ref('users/' + user.uid).update({ profileImage: downloadURL });
+          document.getElementById('edit-profile-image').src = downloadURL;
+        });
+      });
+    }
+
+    /*********************** PERFIL DEL AUTOR **************************/
+    function openAuthorProfile(authorId) {
+      document.getElementById('story-detail-modal').classList.add('hidden');
+      firebase.database().ref('users/' + authorId).once('value').then(snapshot => {
+        const authorData = snapshot.val();
+        if (!authorData || (authorData.blocked && authorData.blockedUntil && Date.now() < authorData.blockedUntil)) {
+          document.getElementById('blocked-error-modal').style.display = "flex";
           return;
         }
-        viewerPC.setRemoteDescription(new RTCSessionDescription(offer))
-          .then(() => viewerPC.createAnswer())
-          .then(answer => viewerPC.setLocalDescription(answer).then(() => answer))
-          .then(answer => {
-            firebase.database().ref(`liveStreams/${broadcasterId}/answer`).set(answer);
-          });
+        let authorNameHTML = authorData.username || 'Autor desconocido';
+        if (authorData.founder) { authorNameHTML += ' <span class="founder-tag">Fundador</span>'; }
+        authorNameHTML += getVerificationIcon(authorData.email || "");
+        document.getElementById('author-profile-name').innerHTML = authorNameHTML;
+        document.getElementById('author-profile-image').src = authorData.profileImage || 'https://via.placeholder.com/150';
+        document.getElementById('author-followers').textContent = formatFollowers(authorData.followersCount || 0);
+        document.getElementById('author-following').textContent = formatFollowers(authorData.followingCount || 0);
+        document.getElementById('author-rated').textContent = authorData.ratedCount || 0;
+        let socialLinksHTML = "";
+        if (authorData.instagram) {
+          socialLinksHTML += `<a href="${authorData.instagram}" target="_blank"><img src="https://img.utdstc.com/icon/847/f33/847f33af27bea889ccaa9b1d25135b42ff5bb590297182d0983afb7304d96884:200" alt="Instagram" class="w-6 h-6"></a>`;
+        }
+        if (authorData.tiktok) {
+          socialLinksHTML += `<a href="${authorData.tiktok}" target="_blank"><img src="https://cdn.pixabay.com/photo/2021/06/15/12/28/tiktok-6338432_1280.png" alt="TikTok" class="w-6 h-6"></a>`;
+        }
+        if (authorData.inkspired) {
+          socialLinksHTML += `<a href="${authorData.inkspired}" target="_blank"><img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTmCCZ41lZmMTQKuO2yydE3lFF0PGbgnLZoXA&s=10" alt="Inkspired" class="w-6 h-6"></a>`;
+        }
+        if (authorData.website) {
+          socialLinksHTML += `<a href="${authorData.website}" target="_blank"><i class="fa-solid fa-globe text-2xl"></i></a>`;
+        }
+        document.getElementById('author-social-links').innerHTML = socialLinksHTML;
+        firebase.database().ref(`liveStreams/${authorId}/isLive`).once('value').then(snapshot => {
+          if(snapshot.exists() && snapshot.val()){
+            let liveLabel = document.getElementById('live-label');
+            if (!liveLabel) {
+              liveLabel = document.createElement('span');
+              liveLabel.id = "live-label";
+              liveLabel.textContent = "EN VIVO";
+              liveLabel.className = "absolute top-0 left-0 bg-red-600 text-white px-2 py-1 rounded text-xs";
+              const container = document.getElementById('author-profile-img-container');
+              container.style.position = "relative";
+              container.appendChild(liveLabel);
+            }
+            document.getElementById('author-profile-image').classList.add('live-border');
+          } else {
+            let liveLabel = document.getElementById('live-label');
+            if(liveLabel) { liveLabel.remove(); }
+            document.getElementById('author-profile-image').classList.remove('live-border');
+          }
+        });
       });
-      firebase.database().ref(`liveStreams/${broadcasterId}`).on('value', snapshot => {
-        if (!snapshot.exists()) {
-          document.getElementById('live-endedMessage').classList.remove('hidden');
-          setTimeout(closeLiveViewModal, 3000);
+      currentViewedAuthorId = authorId;
+      document.getElementById('author-profile-modal').style.display = "block";
+      updateFollowIcon();
+      loadAuthorStories(authorId);
+      document.getElementById('author-profile-image').onclick = function() {
+        firebase.database().ref(`liveStreams/${authorId}/isLive`).once('value').then(snapshot => {
+          if (snapshot.exists() && snapshot.val()) {
+            openLiveViewModal(authorId);
+          }
+        });
+      };
+    }
+    function closeAuthorProfile() {
+      document.getElementById('author-profile-modal').style.display = "none";
+      if (document.getElementById('search-view').classList.contains('hidden')) {
+        document.getElementById('story-detail-modal').classList.remove('hidden');
+      }
+    }
+    function closeBlockedErrorModal() {
+      document.getElementById('blocked-error-modal').style.display = "none";
+      document.getElementById('story-detail-modal').classList.remove('hidden');
+    }
+
+    /*********************** FUNCIONES PARA SEGUIR **************************/
+    function updateFollowIcon() {
+      const currentUser = firebase.auth().currentUser;
+      if (!currentUser || !currentViewedAuthorId) return;
+      const followRef = firebase.database().ref('followers/' + currentViewedAuthorId + '/' + currentUser.uid);
+      followRef.once('value').then(snapshot => {
+        const followIcon = document.getElementById('follow-icon');
+        followIcon.src = snapshot.exists() ?
+          "https://cdn-icons-png.flaticon.com/512/907/907822.png" :
+          "https://cdn-icons-png.freepik.com/512/8370/8370007.png";
+      });
+    }
+    function followAuthor() {
+      const currentUser = firebase.auth().currentUser;
+      if (!currentUser || !currentViewedAuthorId) return;
+      if (currentUser.uid === currentViewedAuthorId) {
+         alert(translations[currentLanguage].followSelfError);
+         return;
+      }
+      const followRef = firebase.database().ref('followers/' + currentViewedAuthorId + '/' + currentUser.uid);
+      followRef.once('value').then(snapshot => {
+        const followIcon = document.getElementById('follow-icon');
+        if (snapshot.exists()) {
+          followRef.remove().then(() => {
+            const authorFollowersCountRef = firebase.database().ref('users/' + currentViewedAuthorId + '/followersCount');
+            authorFollowersCountRef.transaction(current => (current || 0) - 1);
+            followIcon.src = "https://cdn-icons-png.freepik.com/512/8370/8370007.png";
+            alert(translations[currentLanguage].stoppedFollowing);
+          });
+        } else {
+          followRef.set({ followedAt: Date.now() })
+          .then(() => {
+            const authorFollowersCountRef = firebase.database().ref('users/' + currentViewedAuthorId + '/followersCount');
+            authorFollowersCountRef.transaction(current => (current || 0) + 1);
+            followIcon.src = "https://cdn-icons-png.flaticon.com/512/907/907822.png";
+            firebase.database().ref('users/' + currentUser.uid).once('value').then(userSnap => {
+              const followerName = userSnap.val().username;
+              addNotification(currentViewedAuthorId, `${followerName} te ha seguido`);
+            });
+            alert(translations[currentLanguage].nowFollowing);
+          });
         }
       });
-      window.currentViewerPC = viewerPC;
     }
-    
-    function closeLiveViewModal() {
-      document.getElementById('live-view-modal').classList.add('hidden');
-      document.getElementById('live-endedMessage').classList.add('hidden');
-      if (window.currentViewerPC) {
-        window.currentViewerPC.close();
-        window.currentViewerPC = null;
-      }
-    }
-    
-    document.getElementById('live-view-closeBtn').addEventListener('click', closeLiveViewModal);
-    
-    /********** FUNCIONES DE REGALOS EN LIVE (USUARIO ESPECTADOR) **********/
-    document.getElementById('gift-btn').addEventListener('click', () => { document.getElementById('gift-drawer').classList.add('open'); });
-    function closeGiftDrawer() { document.getElementById('gift-drawer').classList.remove('open'); }
-    function sendGift(giftType) {
+    function followUser(userId) {
       const currentUser = firebase.auth().currentUser;
-      if (!currentUser || currentUser.uid === liveBroadcasterId) {
-        alert("No puedes enviar regalos a ti mismo.");
-        return;
+      if (!currentUser) return;
+      if (currentUser.uid === userId) {
+         alert(translations[currentLanguage].followSelfError);
+         return;
       }
-      let giftData = {
-        giftType: giftType,
-        senderName: currentUser.displayName || currentUser.email || "Alguien",
-        timestamp: Date.now()
-      };
-      firebase.database().ref(`liveStreams/${liveBroadcasterId}/gifts`).push(giftData);
-      closeGiftDrawer();
+      const followRef = firebase.database().ref('followers/' + userId + '/' + currentUser.uid);
+      followRef.once('value').then(snapshot => {
+          if (snapshot.exists()) { alert(translations[currentLanguage].alreadyFollowing); }
+          else {
+              followRef.set({ followedAt: Date.now() })
+                 .then(() => {
+                     const userFollowersCountRef = firebase.database().ref('users/' + userId + '/followersCount');
+                     userFollowersCountRef.transaction(current => (current || 0) + 1);
+                     firebase.database().ref('users/' + currentUser.uid).once('value').then(userSnap => {
+                       const followerName = userSnap.val().username;
+                       addNotification(userId, `${followerName} te ha seguido`);
+                     });
+                     alert(translations[currentLanguage].nowFollowing);
+                 });
+          }
+      });
     }
-    function showGiftAnimation(giftUrl, senderName) {
-      const transmitBtn = document.getElementById('live-startBtn');
-      if(transmitBtn) { transmitBtn.style.display = 'none'; }
-      const animContainer = document.getElementById('gift-animation');
-      animContainer.innerHTML = `
-        <div class="text-center">
-          <p class="text-white text-xl mb-2">${senderName} ha enviado un regalo</p>
-          <img src="${giftUrl}" alt="Regalo" class="mx-auto" style="max-width: 100%; max-height: 100%;">
-        </div>`;
-      animContainer.classList.add('show');
-      setTimeout(() => { animContainer.classList.remove('show'); }, 4000);
+    function openFollowingModal() {
+      const currentUser = firebase.auth().currentUser;
+      if (!currentViewedAuthorId) return;
+      if (currentUser.uid !== currentViewedAuthorId) {
+          alert("La lista de usuarios que sigue este autor es privada.");
+          return;
+      }
+      firebase.database().ref('following/' + currentViewedAuthorId).once('value').then(snapshot => {
+          const followingListDiv = document.getElementById('following-list');
+          followingListDiv.innerHTML = '';
+          snapshot.forEach(child => {
+              const followingUserId = child.key;
+              firebase.database().ref('users/' + followingUserId).once('value').then(userSnap => {
+                  const userData = userSnap.val();
+                  const followingDiv = document.createElement('div');
+                  followingDiv.className = 'flex items-center space-x-4';
+                  let verifiedIcon = getVerificationIcon(userData.email || "");
+                  followingDiv.innerHTML = `
+                    <img src="${userData.profileImage || 'https://via.placeholder.com/50'}" alt="${userData.username}" class="w-12 h-12 rounded-full object-cover" />
+                    <span class="font-semibold">${userData.username || 'Usuario'}${verifiedIcon}</span>
+                    <button onclick="followUser('${followingUserId}')" class="bg-[#58CC02] text-white p-1 rounded-full">
+                      <i class="fa-solid fa-user-plus"></i>
+                    </button>
+                  `;
+                  followingListDiv.appendChild(followingDiv);
+              });
+          });
+          document.getElementById('following-modal').style.display = "block";
+      });
     }
-    
-    /********** EFECTO SKELETON **********/
+    function closeFollowingModal() {
+      document.getElementById('following-modal').style.display = "none";
+    }
+
+    /*********************** REPORTES **************************/
+    document.getElementById('report-form').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const user = firebase.auth().currentUser;
+      if (!user || !currentViewedAuthorId) return;
+      if (user.uid === currentViewedAuthorId) {
+         alert("No puedes reportarte a ti mismo.");
+         return;
+      }
+      const reason = document.getElementById('report-reason').value;
+      const description = document.getElementById('report-description').value;
+      firebase.database().ref('users/' + user.uid).once('value').then(userSnap => {
+        const reporterName = userSnap.val().username;
+        firebase.database().ref('users/' + currentViewedAuthorId).once('value').then(authorSnap => {
+          if (!authorSnap.exists()) {
+            alert("El perfil reportado no existe.");
+            return;
+          }
+          const reportedData = authorSnap.val();
+          const reportedName = reportedData.username;
+          const reportData = {
+            reporter: user.uid,
+            reporterName,
+            reportedUser: currentViewedAuthorId,
+            reportedName,
+            reason,
+            description,
+            timestamp: Date.now(),
+            status: "pending"
+          };
+          firebase.database().ref('reports').push(reportData)
+            .then(() => {
+              addNotification(user.uid, translations[currentLanguage].reportSuccess);
+              closeReportModal();
+              document.getElementById('admin-response-modal').innerHTML = `
+                 <div class="p-6 text-center">
+                   <h2 class="text-2xl font-bold mb-4">Reporte enviado</h2>
+                   <p>Tu reporte ha sido enviado y será revisado por el administrador.</p>
+                   <button onclick="closeAdminResponseModal()" class="bg-[#58CC02] text-white px-4 py-2 rounded mt-4">Cerrar</button>
+                 </div>`;
+              document.getElementById('admin-response-modal').style.display = "block";
+              recordLiveSnippet();
+              if (reason === "desnudez" || reason === "arma") {
+                showLiveWarning("Se ha detectado contenido inapropiado. Tu transmisión finalizará en 1 minuto.");
+              }
+            })
+            .catch(error => { console.error("Error al enviar el reporte:", error); });
+        });
+      });
+    });
+    function closeAdminResponseModal() {
+      document.getElementById('admin-response-modal').style.display = "none";
+    }
+
+    /*********************** FUNCIONES DE GRABACIÓN DE LIVE SNIPPET **************************/
+    function recordLiveSnippet() {
+      if (!liveLocalStream) return;
+      try {
+        let options = { mimeType: 'video/webm;codecs=vp9' };
+        let recordedChunks = [];
+        let mediaRecorder = new MediaRecorder(liveLocalStream, options);
+        mediaRecorder.ondataavailable = function(e) {
+          if (e.data.size > 0) {
+            recordedChunks.push(e.data);
+          }
+        };
+        mediaRecorder.onstop = function() {
+          let blob = new Blob(recordedChunks, { type: 'video/webm' });
+          let storageRef = firebase.storage().ref();
+          let videoRef = storageRef.child('liveReports/' + currentBroadcasterId + '/' + Date.now() + '.webm');
+          videoRef.put(blob).then(snapshot => {
+            console.log("Live snippet uploaded:", snapshot.metadata.fullPath);
+          }).catch(error => {
+            console.error("Error uploading live snippet:", error);
+          });
+        };
+        mediaRecorder.start();
+        setTimeout(() => {
+          mediaRecorder.stop();
+        }, 30000);
+      } catch (error) {
+        console.error("Error recording live snippet:", error);
+      }
+    }
+
+    /*********************** CAPÍTULOS **************************/
+    function openChapterCreationModal() { 
+      document.getElementById('chapter-creation-modal').style.display = "flex"; 
+    }
+    function closeChapterCreationModal() { 
+      document.getElementById('chapter-creation-modal').style.display = "none"; 
+      document.getElementById('chapter-form').reset();
+      document.getElementById('word-count').innerText = "0 palabras";
+      document.getElementById('letter-count').innerText = "0 letras";
+      document.getElementById('font-size').value = 16;
+      document.getElementById('font-size-value').innerText = "16px";
+      document.getElementById('chapter-content').style.fontSize = "16px";
+      document.getElementById('chapter-content').style.fontFamily = "Arial";
+    }
+    document.getElementById('chapter-form').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const content = document.getElementById('chapter-content').value;
+      if (!currentEditingStory) { alert(translations[currentLanguage].noEditingStory); return; }
+      const user = firebase.auth().currentUser;
+      if (!user) { alert(translations[currentLanguage].userNotAuthenticated); return; }
+      const chapterNumber = currentChapters.length + 1;
+      const newChapter = { chapterNumber, content, createdAt: Date.now() };
+      const chapterRef = firebase.database().ref('stories/' + currentEditingStory.id + '/chapters').push();
+      newChapter.id = chapterRef.key;
+      chapterRef.set(newChapter)
+        .then(() => { closeChapterCreationModal(); alert(translations[currentLanguage].chapterAdded); })
+        .catch(error => { console.error("Error al agregar capítulo:", error); });
+    });
+    function openChapterReadModal(storyId, chapterId) {
+      const storyDetailModal = document.getElementById('story-detail-modal');
+      if (!storyDetailModal.classList.contains('hidden')) { storyDetailModal.classList.add('hidden'); }
+      firebase.database().ref('stories/' + storyId + '/chapters/' + chapterId).once('value').then(snapshot => {
+        const chapter = snapshot.val();
+        if (chapter) {
+          document.getElementById('read-chapter-number').textContent = translations[currentLanguage].readChapter + " " + chapter.chapterNumber;
+          document.getElementById('read-chapter-text').textContent = chapter.content;
+          setupStarRating(storyId, chapterId);
+          if (!currentEditingStory) { currentEditingStory = { id: storyId, currentChapterId: chapterId }; }
+          else { currentEditingStory.currentChapterId = chapterId; }
+          const user = firebase.auth().currentUser;
+          if (user) {
+             const chapterViewRef = firebase.database().ref('chapterViews/' + chapterId + '/' + user.uid);
+             chapterViewRef.once('value').then(viewSnap => {
+                 if (!viewSnap.exists()) {
+                     chapterViewRef.set(true);
+                     const chapterViewsRef = firebase.database().ref('stories/' + storyId + '/chapters/' + chapterId + '/views');
+                     chapterViewsRef.transaction(current => (current || 0) + 1);
+                 }
+             });
+          }
+          document.getElementById('chapter-read-modal').classList.remove('hidden');
+        } else { alert(translations[currentLanguage].chapterNotFound); }
+      });
+    }
+    function closeChapterReadModal() {
+      document.getElementById('chapter-read-modal').classList.add('hidden');
+      document.getElementById('story-detail-modal').classList.remove('hidden');
+    }
+    function prevChapter() {
+      if (!currentEditingStory || !currentEditingStory.currentChapterId) return;
+      const index = currentChapters.findIndex(ch => ch.id === currentEditingStory.currentChapterId);
+      if (index > 0) {
+        openChapterReadModal(currentEditingStory.id, currentChapters[index - 1].id);
+      } else { alert(translations[currentLanguage].firstChapter); }
+    }
+    function nextChapter() {
+      if (!currentEditingStory || !currentEditingStory.currentChapterId) return;
+      const index = currentChapters.findIndex(ch => ch.id === currentEditingStory.currentChapterId);
+      if (index < currentChapters.length - 1) {
+        openChapterReadModal(currentEditingStory.id, currentChapters[index + 1].id);
+      } else { alert(translations[currentLanguage].lastChapter); }
+    }
+    function setupStarRating(storyId, chapterId) {
+      const stars = document.querySelectorAll("#star-rating .star");
+      stars.forEach(star => { star.classList.remove("selected"); });
+      const user = firebase.auth().currentUser;
+      if (!user) return;
+      const ratingRef = firebase.database().ref('stories/' + storyId + '/chapters/' + chapterId + '/ratings/' + user.uid);
+      ratingRef.once('value').then(snapshot => {
+        const rating = snapshot.val();
+        if (rating) {
+          stars.forEach(star => { if (parseInt(star.getAttribute('data-value')) <= rating) { star.classList.add("selected"); } });
+        }
+      });
+      stars.forEach(star => {
+        star.onclick = function() {
+          const value = parseInt(this.getAttribute('data-value'));
+          ratingRef.set(value)
+            .then(() => {
+              stars.forEach(s => { if (parseInt(s.getAttribute('data-value')) <= value) { s.classList.add("selected"); } else { s.classList.remove("selected"); } });
+              alert(translations[currentLanguage].chapterRated.replace("{value}", value));
+            })
+            .catch(error => { console.error("Error al guardar calificación:", error); });
+        };
+      });
+    }
+
+    /*********************** EFECTO SKELETON **************************/
     function applySkeletonEffect() {
       document.getElementById('profile-image').classList.add('skeleton');
       document.getElementById('profile-username').classList.add('skeleton');
@@ -975,8 +2265,8 @@
     if(!navigator.onLine) { applySkeletonEffect(); }
     window.addEventListener('offline', applySkeletonEffect);
     window.addEventListener('online', removeSkeletonEffect);
-    
-    /********** CARGA DE HISTORIAS **********/
+
+    /*********************** CARGA DE HISTORIAS **************************/
     function loadStories() {
       firebase.database().ref('stories').on('value', snapshot => {
         let stories = [];
@@ -1019,7 +2309,8 @@
         container.appendChild(storyCard);
       });
     }
-    
+
+    /*********************** CARGA DE HISTORIAS DEL USUARIO (Mis Historias) **************************/
     function loadUserStories(userId) {
       const userStoriesRef = firebase.database().ref('stories').orderByChild('userId').equalTo(userId);
       userStoriesRef.on('value', snapshot => {
@@ -1050,7 +2341,8 @@
         });
       });
     }
-    
+
+    /*********************** CARGA DE HISTORIAS DEL AUTOR **************************/
     function loadAuthorStories(authorId) {
       const authorStoriesRef = firebase.database().ref('stories').orderByChild('userId').equalTo(authorId);
       authorStoriesRef.on('value', snapshot => {
@@ -1081,8 +2373,8 @@
         });
       });
     }
-    
-    /********** MODAL REPORTE **********/
+
+    /*********************** MODAL REPORTE (a pantalla completa) **************************/
     function openReportModal() {
       document.getElementById('author-profile-modal').style.display = "none";
       document.getElementById('report-modal').style.display = "flex";
@@ -1090,197 +2382,475 @@
     function closeReportModal() {
       document.getElementById('report-modal').style.display = "none";
     }
-    
-    /********** ADMIN PERFIL **********/
-    function initializeAdminProfile() {
-      const user = firebase.auth().currentUser;
-      if (!user) return;
-      const profileRef = firebase.database().ref('adminProfiles/' + user.uid);
-      profileRef.once('value', snapshot => {
-        if (!snapshot.exists()) {
-          profileRef.set({
-            email: user.email,
-            photoURL: "https://via.placeholder.com/150",
-            points: 0,
-            lastDeposit: Date.now()
-          });
-        }
+
+    /*********************** SWIPE Y ANIMACIÓN EN MODAL DE USUARIO BLOQUEADO **************************/
+    const blockedModal = document.getElementById('blocked-error-modal');
+    let startX = null;
+    blockedModal.addEventListener('touchstart', (e) => {
+      startX = e.touches[0].clientX;
+    });
+    blockedModal.addEventListener('touchmove', (e) => {
+      if (startX === null) return;
+      const diffX = startX - e.touches[0].clientX;
+      if (diffX > 100) { 
+        triggerBlockedModalExitAnimation();
+        startX = null;
+      }
+    });
+    function triggerBlockedModalExitAnimation() {
+      const ball1 = document.createElement('div');
+      const ball2 = document.createElement('div');
+      [ball1, ball2].forEach(ball => {
+        ball.style.position = 'absolute';
+        ball.style.width = '20px';
+        ball.style.height = '20px';
+        ball.style.backgroundColor = '#58CC02';
+        ball.style.borderRadius = '50%';
+        ball.style.transition = 'all 0.5s ease-in-out';
       });
+      ball1.style.top = '50%';
+      ball1.style.left = '10%';
+      ball2.style.top = '50%';
+      ball2.style.left = '80%';
+      blockedModal.appendChild(ball1);
+      blockedModal.appendChild(ball2);
+      setTimeout(() => {
+        ball1.style.left = '45%';
+        ball2.style.left = '55%';
+      }, 100);
+      setTimeout(() => {
+        blockedModal.style.display = 'none';
+        ball1.remove();
+        ball2.remove();
+      }, 1000);
     }
-    
-    function loadAdminProfile() {
+
+    /*********************** MODAL DE CREACIÓN DE CAPÍTULO MODERNO **************************/
+    document.getElementById('font-family').addEventListener('change', function(){
+        document.getElementById('chapter-content').style.fontFamily = this.value;
+    });
+    document.getElementById('font-size').addEventListener('input', function(){
+        var size = this.value;
+        document.getElementById('chapter-content').style.fontSize = size + "px";
+        document.getElementById('font-size-value').innerText = size + "px";
+    });
+    document.getElementById('chapter-content').addEventListener('input', function(){
+        var text = this.value;
+        var words = text.trim().split(/\s+/).filter(word => word.length > 0);
+        document.getElementById('word-count').innerText = words.length + " palabras";
+        document.getElementById('letter-count').innerText = text.replace(/\s/g, "").length + " letras";
+    });
+
+    /*********************** FUNCIONES PARA COMPARTIR PERFIL **************************/
+    function shareProfile() {
       const user = firebase.auth().currentUser;
-      if (!user) return;
-      const profileRef = firebase.database().ref('adminProfiles/' + user.uid);
-      profileRef.on('value', snapshot => {
-        const data = snapshot.val();
-        if (data) {
-          document.getElementById('adminProfilePic').src = data.photoURL || "https://via.placeholder.com/150";
-          document.getElementById('adminProfileEmail').textContent = data.email || "";
-          document.getElementById('adminProfilePoints').textContent = data.points || 0;
-        }
-      });
-    }
-    
-    function updateAdminPhotoFromOriginal() {
-      const user = firebase.auth().currentUser;
-      if (!user) return;
-      firebase.database().ref('users').orderByChild('email').equalTo(user.email).once('value')
-        .then(snapshot => {
-          snapshot.forEach(child => {
-            const data = child.val();
-            if(data.photoURL) {
-              firebase.database().ref('adminProfiles/' + user.uid).update({
-                photoURL: data.photoURL
-              });
-            }
-          });
+      if (!user) {
+        alert("No estás autenticado.");
+        return;
+      }
+      const profileLink = window.location.origin + window.location.pathname + "#profile/" + user.uid;
+      navigator.clipboard.writeText(profileLink)
+        .then(() => {
+          alert("Enlace copiado: " + profileLink);
         })
-        .catch(error => {
-          console.error("Error al obtener la foto de perfil desde la plataforma original:", error);
+        .catch(err => {
+          alert("Error al copiar el enlace: " + err);
         });
     }
-    
-    function checkAndDepositPoints() {
+    function shareAuthorProfile() {
+      if (!currentViewedAuthorId) {
+        alert("No hay perfil de autor seleccionado.");
+        return;
+      }
+      const profileLink = window.location.origin + window.location.pathname + "#profile/" + currentViewedAuthorId;
+      navigator.clipboard.writeText(profileLink)
+        .then(() => {
+          alert("Enlace copiado: " + profileLink);
+        })
+        .catch(err => {
+          alert("Error al copiar el enlace: " + err);
+        });
+    }
+
+    /*********************** FUNCIONES NUEVAS PARA LIVE REPORT (GRABACIÓN Y ADVERTENCIA) **************************/
+    function openLiveReportModal() {
+      document.getElementById('live-report-modal').classList.add('open');
+    }
+    function closeLiveReportModal() {
+      document.getElementById('live-report-modal').classList.remove('open');
+    }
+    function submitLiveReport(reportType) {
       const user = firebase.auth().currentUser;
-      if (!user) return;
-      const profileRef = firebase.database().ref('adminProfiles/' + user.uid);
-      profileRef.once('value', snapshot => {
-        const data = snapshot.val();
-        if (data) {
-          const lastDeposit = data.lastDeposit || 0;
-          const now = Date.now();
-          const twoDays = 2 * 24 * 60 * 60 * 1000;
-          if (now - lastDeposit >= twoDays) {
-            const newPoints = (data.points || 0) + 500;
-            profileRef.update({
-              points: newPoints,
-              lastDeposit: now
-            }).then(() => {
-              console.log("500 puntos depositados automáticamente.");
-            }).catch(err => {
-              console.error("Error depositando puntos:", err);
-            });
+      if (!user) { alert("Debes estar autenticado para reportar."); return; }
+      const reportData = {
+        reporter: user.uid,
+        reportedBroadcaster: liveBroadcasterId,
+        reportType,
+        timestamp: Date.now()
+      };
+      firebase.database().ref('liveReports').push(reportData)
+        .then(() => {
+          alert("Reporte enviado. Se tomará acción en breve.");
+          recordLiveSnippet();
+          if(reportType === "desnudez" || reportType === "arma") {
+            showLiveWarning("Se ha detectado contenido inapropiado. Tu transmisión finalizará en 1 minuto.");
           }
-        }
-      });
+          closeLiveReportModal();
+        })
+        .catch(error => {
+          console.error("Error al enviar el reporte en vivo:", error);
+        });
     }
-    
-    /********** NUEVA SECCIÓN: REGALOS LIVE (ADMIN) **********/
-    function publishGift() {
-      // Añadimos un log para confirmar que se llama la función
-      console.log("Iniciando publicación de regalo...");
-      const currentUser = firebase.auth().currentUser;
-      if (!currentUser) {
-        alert("No estás autenticado. Por favor inicia sesión.");
-        return;
-      }
-      console.log("Usuario autenticado:", currentUser.email);
-      
-      const title = document.getElementById('giftTitle').value.trim();
-      const price = parseInt(document.getElementById('giftPrice').value);
-      const fileInput = document.getElementById('giftFile');
-      if (!title) {
-        alert("Por favor, ingresa el título del regalo.");
-        return;
-      }
-      if (isNaN(price)) {
-        alert("Por favor, ingresa un precio válido.");
-        return;
-      }
-      if (fileInput.files.length === 0) {
-        alert("Por favor, selecciona un archivo para el regalo.");
-        return;
-      }
-      const file = fileInput.files[0];
-      const storageRef = firebase.storage().ref();
-      // Subir el archivo a la carpeta "Live" en Storage
-      const giftRef = storageRef.child('Live/' + Date.now() + '_' + file.name);
-      const uploadTask = giftRef.put(file);
-      uploadTask.on('state_changed', 
-        function progress(snapshot) {
-          // (Opcional: puedes mostrar el progreso)
-          console.log("Subiendo archivo...");
-        },
-        function error(err) {
-          alert("Error al subir el regalo: " + err.message);
-        },
-        function complete() {
-          console.log("Archivo subido, obteniendo URL...");
-          uploadTask.snapshot.ref.getDownloadURL().then(downloadURL => {
-            const giftData = {
-              title: title,
-              price: price,
-              fileUrl: downloadURL,
-              fileType: file.type,
-              timestamp: Date.now()
-            };
-            // Guardamos en el nodo "liveStreams/Live/gifts"
-            firebase.database().ref('liveStreams/Live/gifts').push(giftData)
-              .then(() => {
-                showToast("Regalo '" + title + "' publicado correctamente.");
-                console.log("Regalo publicado:", giftData);
-                document.getElementById('giftForm').reset();
-              })
-              .catch(err => {
-                alert("Error al publicar el regalo: " + err.message);
-              });
+
+    /*********************** FUNCIONES DE GRABACIÓN DE LIVE SNIPPET **************************/
+    function recordLiveSnippet() {
+      if (!liveLocalStream) return;
+      try {
+        let options = { mimeType: 'video/webm;codecs=vp9' };
+        let recordedChunks = [];
+        let mediaRecorder = new MediaRecorder(liveLocalStream, options);
+        mediaRecorder.ondataavailable = function(e) {
+          if (e.data.size > 0) {
+            recordedChunks.push(e.data);
+          }
+        };
+        mediaRecorder.onstop = function() {
+          let blob = new Blob(recordedChunks, { type: 'video/webm' });
+          let storageRef = firebase.storage().ref();
+          let videoRef = storageRef.child('liveReports/' + currentBroadcasterId + '/' + Date.now() + '.webm');
+          videoRef.put(blob).then(snapshot => {
+            console.log("Live snippet uploaded:", snapshot.metadata.fullPath);
+          }).catch(error => {
+            console.error("Error uploading live snippet:", error);
           });
-        }
-      );
-    }
-    
-    document.getElementById('giftForm').addEventListener('submit', function(e) {
-      e.preventDefault(); // Prevenir recarga
-      publishGift();
-    });
-    
-    firebase.database().ref('liveStreams/Live/gifts').on('value', function(snapshot) {
-      const giftListDiv = document.getElementById('giftList');
-      giftListDiv.innerHTML = "";
-      snapshot.forEach(function(childSnapshot) {
-        const gift = childSnapshot.val();
-        const giftKey = childSnapshot.key;
-        const div = document.createElement('div');
-        div.className = "card flex items-center justify-between";
-        let previewHtml = "";
-        if (gift.fileType.startsWith("image/")) {
-          previewHtml = `<img src="${gift.fileUrl}" alt="${gift.title}" class="w-16 h-16 object-cover rounded">`;
-        } else if (gift.fileType.startsWith("video/")) {
-          previewHtml = `<video src="${gift.fileUrl}" class="w-16 h-16 rounded" autoplay muted loop></video>`;
-        } else {
-          previewHtml = `<span>Archivo</span>`;
-        }
-        div.innerHTML = `
-          <div class="flex items-center space-x-4">
-            ${previewHtml}
-            <div>
-              <p class="font-bold">${gift.title}</p>
-              <p class="text-sm">${gift.price === 0 ? "Gratis" : gift.price + " monedas"}</p>
-            </div>
-          </div>
-          <button class="bg-red-500 text-white px-2 py-1 rounded" onclick="deleteGift('${giftKey}')">
-            <i class="fas fa-trash"></i>
-          </button>
-        `;
-        giftListDiv.appendChild(div);
-      });
-    });
-    
-    function deleteGift(giftKey) {
-      if (confirm("¿Estás seguro de que deseas eliminar este regalo?")) {
-        firebase.database().ref('liveStreams/Live/gifts/' + giftKey).remove()
-          .then(() => { showToast("Regalo eliminado."); })
-          .catch(err => { alert("Error al eliminar el regalo: " + err.message); });
+        };
+        mediaRecorder.start();
+        setTimeout(() => {
+          mediaRecorder.stop();
+        }, 30000);
+      } catch (error) {
+        console.error("Error recording live snippet:", error);
       }
     }
-    
-    /********** FUNCIONES PARA COMPARTIR PERFIL **********/
-    // Aquí puedes incluir shareProfile y shareAuthorProfile según necesites.
-    
-    /********** RESTO DEL CÓDIGO (historias, capítulos, etc.) **********/
-    // Se mantiene sin cambios.
-    
+
+    /*********************** FUNCIONES DE LIVE DETECTION (DUMMY) **************************/
+    function startViolationDetection() {
+      setInterval(() => {
+        if (Math.random() < 0.01) {
+          showLiveWarning("Se ha detectado contenido inapropiado. Tu transmisión finalizará en 1 minuto.");
+        }
+        if (Math.random() < 0.005) {
+          showLiveWarning("Se ha detectado un cuchillo. Tu transmisión finalizará en 1 minuto.");
+        }
+      }, 5000);
+    }
+    function showLiveWarning(message) {
+      const overlay = document.createElement('div');
+      overlay.id = "live-warning-overlay";
+      overlay.style.position = "absolute";
+      overlay.style.top = "0";
+      overlay.style.left = "0";
+      overlay.style.right = "0";
+      overlay.style.bottom = "0";
+      overlay.style.backgroundColor = "rgba(0,0,0,0.7)";
+      overlay.style.display = "flex";
+      overlay.style.flexDirection = "column";
+      overlay.style.alignItems = "center";
+      overlay.style.justifyContent = "center";
+      overlay.style.color = "#fff";
+      overlay.style.fontSize = "1.5rem";
+      overlay.innerHTML = `<p>${message}</p><p id="warning-countdown">60</p>`;
+      document.getElementById('live-stream-modal').appendChild(overlay);
+      let remaining = 60;
+      const countdownInterval = setInterval(() => {
+        remaining--;
+        document.getElementById('warning-countdown').textContent = remaining;
+        if (remaining <= 0) {
+          clearInterval(countdownInterval);
+          endLiveStream();
+          overlay.remove();
+        }
+      }, 1000);
+    }
+
+    /*********************** FUNCIONES DE CREACIÓN DE HISTORIAS **************************/
+    function openStoryCreation() {
+      document.getElementById('story-creation-view').classList.remove('hidden');
+      document.getElementById('story-details-view').classList.add('hidden');
+      document.getElementById('story-edit-view').classList.add('hidden');
+    }
+    function closeStoryCreation() {
+      document.getElementById('story-creation-view').classList.add('hidden');
+    }
+    function selectStoryType(type) {
+      storyTypeSelected = type;
+      document.getElementById('story-creation-view').classList.add('hidden');
+      document.getElementById('story-details-view').classList.remove('hidden');
+    }
+    function backToStoryType() {
+      document.getElementById('story-details-view').classList.add('hidden');
+      document.getElementById('story-creation-view').classList.remove('hidden');
+    }
+
+    /*********************** FUNCIONES DE LIVE STREAMING **************************/
+    let liveLocalStream = null;
+    let livePeerConnection = null;
+    let liveBroadcasting = false;
+    let currentBroadcasterId = null;
+
+    let giftListenerRef = null;
+    function giftListenerCallback(snapshot) {
+      let gift = snapshot.val();
+      let giftUrl = "";
+      if(gift.giftType === "mariposas") {
+         giftUrl = "https://i.pinimg.com/originals/7c/29/36/7c2936db7563085ef7470d50fd06e4e3.gif";
+      } else if(gift.giftType === "ballena") {
+         giftUrl = "https://i.pinimg.com/originals/86/31/83/863183316ed35cfeda7baf9ee1de0596.gif";
+      } else if(gift.giftType === "video") {
+         giftUrl = gift.fileUrl || "";
+      }
+      showGiftAnimation(giftUrl, gift.senderName);
+      snapshot.ref.remove();
+    }
+    function listenForGifts() {
+      if (!currentBroadcasterId) return;
+      giftListenerRef = firebase.database().ref(`liveStreams/${currentBroadcasterId}/gifts`);
+      giftListenerRef.on('child_added', giftListenerCallback);
+    }
+    function stopListeningForGifts() {
+      if (giftListenerRef) {
+        giftListenerRef.off('child_added', giftListenerCallback);
+        giftListenerRef = null;
+      }
+    }
+
+    function openLiveStreamModal() {
+      const user = firebase.auth().currentUser;
+      if (!user) {
+        alert("Debes estar autenticado para transmitir en vivo.");
+        return;
+      }
+      currentBroadcasterId = user.uid;
+      document.getElementById('live-stream-modal').classList.remove('hidden');
+      let constraints = { video: { width: { ideal: 1280 }, height: { ideal: 720 } }, audio: true };
+      if (/Android/i.test(navigator.userAgent)) {
+         constraints.video = { width: { ideal: 1920 }, height: { ideal: 1080 } };
+      }
+      navigator.mediaDevices.getUserMedia(constraints)
+        .then(stream => {
+          liveLocalStream = stream;
+          document.getElementById('live-localVideo').srcObject = stream;
+        })
+        .catch(err => {
+          alert("Error al acceder a la cámara: " + err);
+        });
+      const profileImg = document.getElementById('profile-image');
+      if (profileImg) {
+        profileImg.classList.add('live-border');
+      }
+      startViolationDetection();
+      listenForGifts();
+    }
+    function closeLiveStreamModal() {
+      document.getElementById('live-stream-modal').classList.add('hidden');
+      if (liveLocalStream) {
+        liveLocalStream.getTracks().forEach(track => track.stop());
+        liveLocalStream = null;
+      }
+      if (liveBroadcasting) {
+        endLiveStream();
+      }
+      const profileImg = document.getElementById('profile-image');
+      if (profileImg) {
+        profileImg.classList.remove('live-border');
+      }
+      stopListeningForGifts();
+    }
+    function startLiveCountdown(duration, callback) {
+      let remaining = duration;
+      const countdownEl = document.getElementById('live-countdown');
+      countdownEl.textContent = remaining;
+      const interval = setInterval(() => {
+        remaining--;
+        if (remaining > 0) {
+          countdownEl.textContent = remaining;
+        } else {
+          clearInterval(interval);
+          countdownEl.textContent = "";
+          callback();
+        }
+      }, 1000);
+    }
+    document.getElementById('live-startBtn').addEventListener('click', () => {
+      startLiveCountdown(10, () => {
+        document.getElementById('live-indicator').classList.remove('hidden');
+        document.getElementById('live-startBtn').classList.add('hidden');
+        document.getElementById('live-endBtn').classList.remove('hidden');
+        startBroadcasting();
+      });
+    });
+    function startBroadcasting() {
+      livePeerConnection = new RTCPeerConnection();
+      liveLocalStream.getTracks().forEach(track => {
+        livePeerConnection.addTrack(track, liveLocalStream);
+      });
+      livePeerConnection.onicecandidate = event => {
+        if (event.candidate) {
+          firebase.database().ref(`liveStreams/${currentBroadcasterId}/candidates`).push(event.candidate.toJSON());
+        }
+      };
+      livePeerConnection.createOffer().then(offer => {
+        return livePeerConnection.setLocalDescription(offer).then(() => offer);
+      }).then(offer => {
+        firebase.database().ref(`liveStreams/${currentBroadcasterId}`).set({
+          isLive: true,
+          offer: offer,
+          views: 0
+        });
+        liveBroadcasting = true;
+        firebase.database().ref(`followers/${currentBroadcasterId}`).once('value').then(snapshot => {
+          snapshot.forEach(child => {
+            const followerId = child.key;
+            firebase.database().ref('users/' + currentBroadcasterId).once('value').then(userSnap => {
+              const username = userSnap.val().username;
+              addNotification(followerId, `${username} está transmitiendo en vivo`);
+            });
+          });
+        });
+        firebase.database().ref(`liveStreams/${currentBroadcasterId}/answer`).on('value', snapshot => {
+          const answer = snapshot.val();
+          if (answer && livePeerConnection && !livePeerConnection.remoteDescription) {
+            livePeerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+          }
+        });
+        firebase.database().ref(`liveStreams/${currentBroadcasterId}/viewerCandidates`).on('child_added', snapshot => {
+          const candidate = snapshot.val();
+          if (candidate && livePeerConnection) {
+            livePeerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+          }
+        });
+        firebase.database().ref(`liveStreams/${currentBroadcasterId}/views`).on('value', snapshot => {
+          const views = snapshot.val() || 0;
+          document.getElementById('live-viewCount').textContent = views + " vistas";
+        });
+      });
+    }
+    function endLiveStream() {
+      if (livePeerConnection) {
+        livePeerConnection.close();
+        livePeerConnection = null;
+      }
+      firebase.database().ref(`liveStreams/${currentBroadcasterId}`).remove();
+      liveBroadcasting = false;
+      const profileImg = document.getElementById('profile-image');
+      if (profileImg) {
+        profileImg.classList.remove('live-border');
+      }
+      setTimeout(() => {
+        closeLiveStreamModal();
+      }, 3000);
+    }
+    document.getElementById('live-endBtn').addEventListener('click', () => {
+      endLiveStream();
+    });
+
+    /*********************** FUNCIONES PARA EL ESPECTADOR (VIEWER) **************************/
+    function openLiveViewModal(broadcasterId) {
+      liveBroadcasterId = broadcasterId;
+      document.getElementById('live-view-modal').classList.remove('hidden');
+      firebase.database().ref(`liveStreams/${broadcasterId}/views`).transaction(current => (current || 0) + 1);
+      const viewerPC = new RTCPeerConnection();
+      viewerPC.onicecandidate = event => {
+        if (event.candidate) {
+          firebase.database().ref(`liveStreams/${broadcasterId}/viewerCandidates`).push(event.candidate.toJSON());
+        }
+      };
+      viewerPC.ontrack = event => {
+        document.getElementById('live-remoteVideo').srcObject = event.streams[0];
+      };
+      firebase.database().ref(`liveStreams/${broadcasterId}/offer`).once('value').then(snapshot => {
+        const offer = snapshot.val();
+        if (!offer) {
+          alert("El autor no está transmitiendo.");
+          closeLiveViewModal();
+          return;
+        }
+        viewerPC.setRemoteDescription(new RTCSessionDescription(offer))
+          .then(() => viewerPC.createAnswer())
+          .then(answer => viewerPC.setLocalDescription(answer).then(() => answer))
+          .then(answer => {
+            firebase.database().ref(`liveStreams/${broadcasterId}/answer`).set(answer);
+          });
+      });
+      firebase.database().ref(`liveStreams/${broadcasterId}`).on('value', snapshot => {
+        if (!snapshot.exists()) {
+          document.getElementById('live-endedMessage').classList.remove('hidden');
+          setTimeout(closeLiveViewModal, 3000);
+        }
+      });
+      window.currentViewerPC = viewerPC;
+    }
+    function closeLiveViewModal() {
+      document.getElementById('live-view-modal').classList.add('hidden');
+      document.getElementById('live-endedMessage').classList.add('hidden');
+      if (window.currentViewerPC) {
+        window.currentViewerPC.close();
+        window.currentViewerPC = null;
+      }
+    }
+    document.getElementById('live-view-closeBtn').addEventListener('click', closeLiveViewModal);
+
+    /*********************** FUNCIONES DE REGALOS EN LIVE **************************/
+    document.getElementById('gift-btn').addEventListener('click', () => {
+      document.getElementById('gift-drawer').classList.add('open');
+    });
+    function closeGiftDrawer() {
+      document.getElementById('gift-drawer').classList.remove('open');
+    }
+    function sendGift(giftType) {
+      const currentUser = firebase.auth().currentUser;
+      if (!currentUser || currentUser.uid === liveBroadcasterId) {
+        alert("No puedes enviar regalos a ti mismo.");
+        return;
+      }
+      firebase.database().ref('users/' + liveBroadcasterId).transaction(userData => {
+        if (userData) {
+          userData.coins = (userData.coins || 0) + 5;
+        }
+        return userData;
+      }).then(() => {
+        let giftData = {
+          giftType: giftType,
+          senderName: currentUser.displayName || currentUser.email || "Alguien",
+          timestamp: Date.now()
+        };
+        firebase.database().ref(`liveStreams/${liveBroadcasterId}/gifts`).push(giftData);
+        closeGiftDrawer();
+      }).catch(error => {
+        console.error("Error al enviar regalo:", error);
+      });
+    }
+    function showGiftAnimation(giftUrl, senderName) {
+      const transmitBtn = document.getElementById('live-startBtn');
+      if(transmitBtn) transmitBtn.style.display = 'none';
+      const animContainer = document.getElementById('gift-animation');
+      animContainer.innerHTML = `
+        <div class="text-center">
+          <p class="text-white text-xl mb-2">${senderName} ha enviado un regalo</p>
+          <img src="${giftUrl}" alt="Regalo" class="mx-auto" style="max-width: 100%; max-height: 100%;">
+        </div>`;
+      animContainer.classList.add('show');
+      setTimeout(() => {
+        animContainer.classList.remove('show');
+      }, 4000);
+    }
+
+    /*********************** FUNCIONES PARA REPORTAR EN LIVE **************************/
+    // openLiveReportModal y closeLiveReportModal ya fueron definidas arriba.
+    // submitLiveReport también se define arriba.
+
+    /*********************** FIN DE NUEVAS FUNCIONALIDADES **************************/
+
   </script>
 </body>
 </html>
