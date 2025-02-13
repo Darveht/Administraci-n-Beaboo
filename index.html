@@ -162,7 +162,30 @@
     }
     /* Para que los modales del dashboard se muestren en primer plano */
     #adminDashboard, #adminAuthModal { z-index: 50; }
-    /* Nota: Para que el contenido se actualice en tiempo real se usan los listeners de Firebase (sin estilos especiales aquí) */
+    
+    /* --------------------- NUEVA SECCIÓN: REGALOS LIVE --------------------- */
+    /* Nueva pestaña en la barra de tabs */
+    nav.tabs button.giftsTabBtn {
+      /* Inicialmente con fondo gris (no activa) */
+      background-color: #ccc;
+      color: #333;
+    }
+    /* Sección de regalos live en el dashboard */
+    #giftsTab {
+      padding: 1rem;
+    }
+    /* Formulario para subir regalo */
+    #giftForm input,
+    #giftForm button {
+      margin-top: 0.75rem;
+    }
+    /* Contenedor para la lista de regalos */
+    #giftList .card {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    /* ------------------------------------------------------------------------- */
   </style>
 </head>
 <body class="bg-gray-100">
@@ -221,7 +244,10 @@
       <button class="admin-tab px-4 py-2 bg-gray-300 text-gray-700 rounded" onclick="showTab('stories', event)">
         <i class="fas fa-book mr-1"></i> Historias
       </button>
-      <!-- NUEVA PESTAÑA: PERFIL -->
+      <!-- NUEVA PESTAÑA: REGALOS LIVE -->
+      <button class="admin-tab giftsTabBtn px-4 py-2 bg-gray-300 text-gray-700 rounded" onclick="showTab('gifts', event)">
+        <i class="fas fa-gift mr-1"></i> Regalos Live
+      </button>
       <button class="admin-tab px-4 py-2 bg-gray-300 text-gray-700 rounded" onclick="showTab('profile', event)">
         <i class="fas fa-user mr-1"></i> Perfil
       </button>
@@ -259,6 +285,24 @@
         <h2 class="text-2xl font-bold mb-4">Historias por Autor</h2>
         <div id="authorsList" class="space-y-4"></div>
       </section>
+      <!-- NUEVA SECCIÓN: REGALOS LIVE -->
+      <section id="giftsTab" class="admin-tab-content hidden">
+        <h2 class="text-2xl font-bold mb-4">Administrar Regalos Live</h2>
+        <!-- Formulario para subir un nuevo regalo -->
+        <div class="card mb-4">
+          <h3 class="text-xl font-bold mb-2">Subir Nuevo Regalo</h3>
+          <form id="giftForm" class="space-y-4">
+            <input type="text" id="giftTitle" placeholder="Título del regalo" class="w-full p-3 border rounded">
+            <input type="number" id="giftPrice" placeholder="Precio en monedas (0 para gratis)" min="0" class="w-full p-3 border rounded">
+            <input type="file" id="giftFile" accept="image/*,video/*,image/svg+xml" class="w-full p-3 border rounded">
+            <button type="submit" class="w-full bg-[#58CC02] text-white p-3 rounded flex items-center justify-center">
+              <i class="fas fa-upload mr-2"></i> Publicar Regalo
+            </button>
+          </form>
+        </div>
+        <!-- Lista de regalos existentes -->
+        <div id="giftList" class="space-y-4"></div>
+      </section>
       <!-- NUEVA SECCIÓN: PERFIL -->
       <section id="profileTab" class="admin-tab-content hidden">
         <h2 class="text-2xl font-bold mb-4">Perfil del Administrador</h2>
@@ -266,7 +310,6 @@
           <img id="adminProfilePic" src="https://via.placeholder.com/150" alt="Foto de perfil" class="w-24 h-24 rounded-full mb-4">
           <h3 id="adminProfileEmail" class="text-xl font-bold"></h3>
           <div class="flex items-center mt-2">
-            <!-- Se usa el ícono de dinero proporcionado con margen -->
             <img src="https://cdn-icons-png.flaticon.com/512/5776/5776691.png" alt="Puntos" class="w-6 h-6 mr-2" />
             <span id="adminProfilePoints" class="text-lg"></span> puntos
           </div>
@@ -298,7 +341,6 @@
         <h2 id="modalAuthorName" class="text-2xl font-bold">Historias de [Autor]</h2>
         <button onclick="executeWithSpinner(function(){ closeStoriesModal(); })" class="text-gray-500 text-3xl">&times;</button>
       </div>
-      <!-- Aquí se listarán todas las historias del autor con sus datos -->
       <div id="authorStoriesList" class="space-y-4"></div>
     </div>
   </div>
@@ -334,14 +376,12 @@
     }
     
     /********** UTILIDADES DE ESTILO **********/
-    // Devuelve el ícono de verificación si el email es glamworksapps@gmail.com
     function getVerificationIcon(email) {
       return email === "glamworksapps@gmail.com" 
              ? ' <img src="https://cdn-icons-png.flaticon.com/512/845/845646.png" alt="Verificado" class="inline-block w-4 h-4 ml-1" />'
              : "";
     }
     
-    // Alternar entre registro e inicio de sesión en la sección de intro
     function toggleAdminAuth(){
       const intro = document.getElementById('adminIntro');
       const authModal = document.getElementById('adminAuthModal');
@@ -354,7 +394,6 @@
       }
     }
     
-    // Mostrar/ocultar pestañas del dashboard
     function showTab(tabName, event){
       document.querySelectorAll('.admin-tab-content').forEach(tab => tab.classList.add('hidden'));
       document.getElementById(tabName + "Tab").classList.remove('hidden');
@@ -366,14 +405,12 @@
     }
     
     /********** ADMIN LOGIN/REGISTRO **********/
-    // Registro del administrador
     document.getElementById('adminRegisterForm').addEventListener('submit', function(e){
       e.preventDefault();
       const email = document.getElementById('adminRegEmail').value;
       const password = document.getElementById('adminRegPassword').value;
       firebase.auth().createUserWithEmailAndPassword(email, password)
         .then(userCredential => {
-          // Permitir acceso solo a "darelvega6@icloud.com", "ponsy75@yahoo.com" y "donovanyaztel1863@gmail.com"
           if(
             userCredential.user.email !== "darelvega6@icloud.com" &&
             userCredential.user.email !== "ponsy75@yahoo.com" &&
@@ -390,25 +427,22 @@
           loadBlockedUsers();
           loadAuthorsForStories();
           loadVerifiedUsers();
-          // Inicializar y cargar perfil de administrador en tiempo real
           initializeAdminProfile();
           loadAdminProfile();
-          updateAdminPhotoFromOriginal(); // Actualiza la foto de perfil desde la plataforma original
-          setInterval(checkAndDepositPoints, 60000); // Verificar cada minuto
+          updateAdminPhotoFromOriginal();
+          setInterval(checkAndDepositPoints, 60000);
         })
         .catch(error => {
           alert(error.message);
         });
     });
     
-    // Inicio de sesión del administrador
     document.getElementById('adminAuthForm').addEventListener('submit', function(e){
       e.preventDefault();
       const email = document.getElementById('adminAuthEmail').value;
       const password = document.getElementById('adminAuthPassword').value;
       firebase.auth().signInWithEmailAndPassword(email, password)
         .then(userCredential => {
-          // Permitir acceso solo a "darelvega6@icloud.com", "ponsy75@yahoo.com" y "donovanyaztel1863@gmail.com"
           if(
             userCredential.user.email !== "darelvega6@icloud.com" &&
             userCredential.user.email !== "ponsy75@yahoo.com" &&
@@ -425,11 +459,10 @@
           loadBlockedUsers();
           loadAuthorsForStories();
           loadVerifiedUsers();
-          // Inicializar y cargar perfil de administrador en tiempo real
           initializeAdminProfile();
           loadAdminProfile();
-          updateAdminPhotoFromOriginal(); // Actualiza la foto de perfil desde la plataforma original
-          setInterval(checkAndDepositPoints, 60000); // Verificar cada minuto
+          updateAdminPhotoFromOriginal();
+          setInterval(checkAndDepositPoints, 60000);
         })
         .catch(error => {
           alert(error.message);
@@ -452,7 +485,6 @@
           const report = child.val();
           const reportDiv = document.createElement('div');
           reportDiv.className = "card";
-          // Si el reporte es de perfil (no tiene storyId o tiene report.reason "perfil_falso")
           let blockButton = "";
           if(report.reason === "perfil_falso" || (!report.storyId && report.reportedUser)){
             blockButton = `<button class="bg-gray-700 text-white px-3 py-1 rounded flex items-center" onclick="executeWithSpinner(function(){ blockProfile('${report.reportedUser}'); })">
@@ -533,7 +565,6 @@
     /********** USUARIOS BLOQUEADOS **********/
     function loadBlockedUsers(){
       const usersRef = firebase.database().ref('users');
-      // Se recuperan solo los usuarios con blocked: true
       usersRef.orderByChild('blocked').equalTo(true).on('value', snapshot => {
         const blockedList = document.getElementById('blockedUsersList');
         blockedList.innerHTML = "";
@@ -554,13 +585,15 @@
     }
     
     function unblockUser(userId){
-      firebase.database().ref('users/' + userId).update({ blocked: false, blockedUntil: null })
+      firebase.database().ref('users/' + userId).update({ 
+        blocked: false,
+        blockedUntil: null
+      })
         .then(() => { alert("Usuario desbloqueado"); })
         .catch(error => { console.error("Error al desbloquear usuario:", error); });
     }
     
     /********** BLOQUEAR HISTORIAS Y PERFILES **********/
-    // Función para bloquear una historia (desactivarla)
     function blockStory(storyId){
       if(confirm("¿Seguro que deseas bloquear esta historia? Se desactivará en la plataforma.")){
         firebase.database().ref('stories/' + storyId).update({ 
@@ -572,10 +605,8 @@
       }
     }
     
-    // Función para bloquear un perfil (reportado)
     function blockProfile(userId){
       if(confirm("¿Seguro que deseas bloquear este perfil? El usuario quedará bloqueado en tiempo real.")){
-        // Bloqueo por 7 días (ajustable)
         const blockedUntil = Date.now() + 7 * 24 * 60 * 60 * 1000;
         firebase.database().ref('users/' + userId).update({ 
           blocked: true,
@@ -709,19 +740,115 @@
       document.getElementById('storiesModal').classList.add('hidden');
     }
     
-    /********** NUEVA FUNCIONALIDAD: PERFIL DEL ADMINISTRADOR **********/
+    /********** NUEVA FUNCIONALIDAD: REGALOS LIVE **********/
+    // Función para publicar un nuevo regalo live
+    function publishGift() {
+      const title = document.getElementById('giftTitle').value.trim();
+      const price = parseInt(document.getElementById('giftPrice').value);
+      const fileInput = document.getElementById('giftFile');
+      if(!title) {
+        alert("Por favor, ingresa el título del regalo.");
+        return;
+      }
+      if(isNaN(price)) {
+        alert("Por favor, ingresa un precio válido.");
+        return;
+      }
+      if(fileInput.files.length === 0) {
+        alert("Por favor, selecciona un archivo para el regalo.");
+        return;
+      }
+      const file = fileInput.files[0];
+      const storageRef = firebase.storage().ref();
+      // Usamos la fecha y el nombre del archivo para crear un identificador único
+      const giftRef = storageRef.child('liveGifts/' + Date.now() + '_' + file.name);
+      const uploadTask = giftRef.put(file);
+      uploadTask.on('state_changed', 
+        function progress(snapshot) {
+          // Puedes agregar feedback de progreso aquí si lo deseas
+        },
+        function error(err) {
+          alert("Error al subir el regalo: " + err.message);
+        },
+        function complete() {
+          uploadTask.snapshot.ref.getDownloadURL().then(downloadURL => {
+            const giftData = {
+              title: title,
+              price: price,
+              fileUrl: downloadURL,
+              fileType: file.type,
+              timestamp: Date.now()
+            };
+            firebase.database().ref('liveGifts').push(giftData)
+              .then(() => {
+                alert("Regalo publicado correctamente.");
+                document.getElementById('giftForm').reset();
+              })
+              .catch(err => {
+                alert("Error al publicar el regalo: " + err.message);
+              });
+          });
+        }
+      );
+    }
     
-    // Crea la cuenta de perfil del administrador en Firebase si no existe
+    // Listener para el formulario de regalo
+    document.getElementById('giftForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      publishGift();
+    });
+    
+    // Escuchar cambios en la rama 'liveGifts' y actualizar la lista de regalos
+    firebase.database().ref('liveGifts').on('value', function(snapshot) {
+      const giftListDiv = document.getElementById('giftList');
+      giftListDiv.innerHTML = "";
+      snapshot.forEach(function(childSnapshot) {
+        const gift = childSnapshot.val();
+        const giftKey = childSnapshot.key;
+        const div = document.createElement('div');
+        div.className = "card flex items-center justify-between";
+        let previewHtml = "";
+        if(gift.fileType.startsWith("image/")){
+          previewHtml = `<img src="${gift.fileUrl}" alt="${gift.title}" class="w-16 h-16 object-cover rounded">`;
+        } else if(gift.fileType.startsWith("video/")){
+          previewHtml = `<video src="${gift.fileUrl}" class="w-16 h-16 rounded" autoplay muted loop></video>`;
+        } else {
+          previewHtml = `<span>Archivo</span>`;
+        }
+        div.innerHTML = `
+          <div class="flex items-center space-x-4">
+            ${previewHtml}
+            <div>
+              <p class="font-bold">${gift.title}</p>
+              <p class="text-sm">${gift.price === 0 ? "Gratis" : gift.price + " monedas"}</p>
+            </div>
+          </div>
+          <button class="bg-red-500 text-white px-2 py-1 rounded" onclick="deleteGift('${giftKey}')">
+            <i class="fas fa-trash"></i>
+          </button>
+        `;
+        giftListDiv.appendChild(div);
+      });
+    });
+    
+    function deleteGift(giftKey) {
+      if(confirm("¿Estás seguro de que deseas eliminar este regalo?")) {
+        firebase.database().ref('liveGifts/' + giftKey).remove()
+          .then(() => { alert("Regalo eliminado."); })
+          .catch(err => { alert("Error al eliminar el regalo: " + err.message); });
+      }
+    }
+    
+    /********** NUEVA FUNCIONALIDAD: PERFIL DEL ADMINISTRADOR **********/
     function initializeAdminProfile() {
       const user = firebase.auth().currentUser;
       if (!user) return;
       const profileRef = firebase.database().ref('adminProfiles/' + user.uid);
       profileRef.once('value', snapshot => {
         if (!snapshot.exists()) {
-          // Crear perfil con valores por defecto
           profileRef.set({
             email: user.email,
-            photoURL: "https://via.placeholder.com/150", // Imagen por defecto (se actualizará si se detecta en la plataforma original)
+            photoURL: "https://via.placeholder.com/150",
             points: 0,
             lastDeposit: Date.now()
           });
@@ -729,7 +856,6 @@
       });
     }
     
-    // Carga en tiempo real los datos del perfil del administrador y actualiza la UI en la pestaña de Perfil
     function loadAdminProfile() {
       const user = firebase.auth().currentUser;
       if (!user) return;
@@ -744,17 +870,14 @@
       });
     }
     
-    // Función que consulta en la rama "users" de la plataforma original para actualizar la foto de perfil
     function updateAdminPhotoFromOriginal() {
       const user = firebase.auth().currentUser;
       if (!user) return;
-      // Buscar en la rama 'users' un registro que tenga el mismo email
       firebase.database().ref('users').orderByChild('email').equalTo(user.email).once('value')
         .then(snapshot => {
           snapshot.forEach(child => {
             const data = child.val();
             if(data.photoURL) {
-              // Actualizar la foto de perfil en adminProfiles
               firebase.database().ref('adminProfiles/' + user.uid).update({
                 photoURL: data.photoURL
               });
@@ -766,8 +889,6 @@
         });
     }
     
-    // Función que verifica cada dos días (o cada vez que se llame) si han pasado 2 días desde el último depósito de puntos.
-    // Si es así, se añaden 500 puntos al perfil del administrador y se actualiza la marca de tiempo.
     function checkAndDepositPoints() {
       const user = firebase.auth().currentUser;
       if (!user) return;
@@ -777,7 +898,7 @@
         if (data) {
           const lastDeposit = data.lastDeposit || 0;
           const now = Date.now();
-          const twoDays = 2 * 24 * 60 * 60 * 1000; // 2 días en milisegundos
+          const twoDays = 2 * 24 * 60 * 60 * 1000;
           if (now - lastDeposit >= twoDays) {
             const newPoints = (data.points || 0) + 500;
             profileRef.update({
@@ -793,26 +914,1254 @@
       });
     }
     
-    /********** NOTA SOBRE LA INTEGRACIÓN CON LA PLATAFORMA ORIGINAL **********
-     * Para que un usuario bloqueado (blocked: true) no se muestre en la plataforma original (ni su nombre, ni sus historias, etc.),
-     * deberás modificar las consultas en esa parte de tu aplicación. Por ejemplo:
-     *
-     *   firebase.database().ref('users')
-     *     .orderByChild('blocked').equalTo(false)
-     *     .on('value', snapshot => {
-     *       // Se mostrarán solo los usuarios no bloqueados.
-     *     });
-     *
-     * De igual forma, para las historias:
-     *
-     *   firebase.database().ref('stories')
-     *     .orderByChild('blocked').equalTo(false)
-     *     .on('value', snapshot => {
-     *       // Se mostrarán solo las historias que no hayan sido bloqueadas.
-     *     });
-     *
-     * Así, cuando el administrador use la función blockProfile, el usuario quedará bloqueado y no aparecerá en la parte pública.
-     ****************************************************************************************/
+    /********** HISTORIAS DE AUTORES **********/
+    function loadAuthorsForStories(){
+      const storiesRef = firebase.database().ref('stories');
+      storiesRef.on('value', snapshot => {
+        const authorsList = document.getElementById('authorsList');
+        let authors = {};
+        snapshot.forEach(child => {
+          const story = child.val();
+          if(story.userId){
+            authors[story.userId] = story.username || "Sin nombre";
+          }
+        });
+        authorsList.innerHTML = "";
+        for(const uid in authors){
+          const div = document.createElement('div');
+          div.className = "card flex justify-between items-center";
+          div.innerHTML = `<span><strong>${authors[uid]}</strong> (${uid})</span>
+                           <button class="bg-blue-500 text-white px-3 py-1 rounded flex items-center" onclick="executeWithSpinner(function(){ manageStories('${uid}', '${authors[uid]}'); })">
+                             <i class="fas fa-book mr-1"></i> Ver Historias
+                           </button>`;
+          authorsList.appendChild(div);
+        }
+      });
+    }
+    
+    function manageStories(userId, username){
+      currentAuthorForStories = userId;
+      document.getElementById('modalAuthorName').innerText = "Historias de " + username;
+      showSpinner();
+      firebase.database().ref('stories').orderByChild('userId').equalTo(userId).once('value')
+        .then(snapshot => {
+          const modalList = document.getElementById('authorStoriesList');
+          modalList.innerHTML = "";
+          snapshot.forEach(child => {
+            const story = child.val();
+            const storyDiv = document.createElement('div');
+            storyDiv.className = "card flex justify-between items-center";
+            storyDiv.innerHTML = `<div>
+                                    <p class="font-bold">${story.title}</p>
+                                    <p class="text-sm">${new Date(story.createdAt).toLocaleString()}</p>
+                                    <p class="text-sm">${story.synopsis || ""}</p>
+                                  </div>
+                                  <button class="bg-red-500 text-white px-3 py-1 rounded flex items-center" onclick="executeWithSpinner(function(){ blockStory('${child.key}'); })">
+                                    <i class="fas fa-ban mr-1"></i> Bloquear
+                                  </button>`;
+            modalList.appendChild(storyDiv);
+          });
+          hideSpinner();
+          document.getElementById('storiesModal').classList.remove('hidden');
+        })
+        .catch(error => {
+          console.error("Error al cargar historias:", error);
+          hideSpinner();
+        });
+    }
+    
+    function closeStoriesModal(){
+      document.getElementById('storiesModal').classList.add('hidden');
+    }
+    
+    /********** LIVE STREAMING (NUEVA FUNCIÓN) **********/
+    let liveLocalStream = null;
+    let livePeerConnection = null;
+    let liveBroadcasting = false;
+    let currentBroadcasterId = null;
+    
+    function openLiveStreamModal() {
+      const user = firebase.auth().currentUser;
+      if (!user) {
+        alert("Debes estar autenticado para transmitir en vivo.");
+        return;
+      }
+      currentBroadcasterId = user.uid;
+      document.getElementById('live-stream-modal').classList.remove('hidden');
+      navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+        .then(stream => {
+          liveLocalStream = stream;
+          document.getElementById('live-localVideo').srcObject = stream;
+        })
+        .catch(err => {
+          alert("Error al acceder a la cámara: " + err);
+        });
+      const profileImg = document.getElementById('profile-image');
+      if (profileImg) {
+        profileImg.classList.add('live-border');
+      }
+      firebase.database().ref(`liveStreams/${currentBroadcasterId}/gifts`).on('child_added', snapshot => {
+          let gift = snapshot.val();
+          let giftUrl = "";
+          if(gift.giftType === "mariposas") {
+             giftUrl = "https://i.pinimg.com/originals/7c/29/36/7c2936db7563085ef7470d50fd06e4e3.gif";
+          } else if(gift.giftType === "ballena") {
+             giftUrl = "https://i.pinimg.com/originals/86/31/83/863183316ed35cfeda7baf9ee1de0596.gif";
+          }
+          showGiftAnimation(giftUrl, gift.senderName);
+          snapshot.ref.remove();
+      });
+    }
+    
+    function closeLiveStreamModal() {
+      document.getElementById('live-stream-modal').classList.add('hidden');
+      if (liveLocalStream) {
+        liveLocalStream.getTracks().forEach(track => track.stop());
+        liveLocalStream = null;
+      }
+      if (liveBroadcasting) {
+        endLiveStream();
+      }
+      const profileImg = document.getElementById('profile-image');
+      if (profileImg) {
+        profileImg.classList.remove('live-border');
+      }
+    }
+    
+    function startLiveCountdown(duration, callback) {
+      let remaining = duration;
+      const countdownEl = document.getElementById('live-countdown');
+      countdownEl.textContent = remaining;
+      const interval = setInterval(() => {
+        remaining--;
+        if (remaining > 0) {
+          countdownEl.textContent = remaining;
+        } else {
+          clearInterval(interval);
+          countdownEl.textContent = "";
+          callback();
+        }
+      }, 1000);
+    }
+    
+    document.getElementById('live-startBtn').addEventListener('click', () => {
+      startLiveCountdown(10, () => {
+        document.getElementById('live-indicator').classList.remove('hidden');
+        document.getElementById('live-startBtn').classList.add('hidden');
+        document.getElementById('live-endBtn').classList.remove('hidden');
+        startBroadcasting();
+      });
+    });
+    
+    function startBroadcasting() {
+      livePeerConnection = new RTCPeerConnection();
+      liveLocalStream.getTracks().forEach(track => {
+        livePeerConnection.addTrack(track, liveLocalStream);
+      });
+      livePeerConnection.onicecandidate = event => {
+        if (event.candidate) {
+          firebase.database().ref(`liveStreams/${currentBroadcasterId}/candidates`).push(event.candidate.toJSON());
+        }
+      };
+      livePeerConnection.createOffer().then(offer => {
+        return livePeerConnection.setLocalDescription(offer).then(() => offer);
+      }).then(offer => {
+        firebase.database().ref(`liveStreams/${currentBroadcasterId}`).set({
+          isLive: true,
+          offer: offer,
+          views: 0
+        });
+        liveBroadcasting = true;
+        firebase.database().ref(`followers/${currentBroadcasterId}`).once('value').then(snapshot => {
+          snapshot.forEach(child => {
+            const followerId = child.key;
+            firebase.database().ref('users/' + currentBroadcasterId).once('value').then(userSnap => {
+              const username = userSnap.val().username;
+              addNotification(followerId, `${username} está transmitiendo en vivo`);
+            });
+          });
+        });
+        firebase.database().ref(`liveStreams/${currentBroadcasterId}/answer`).on('value', snapshot => {
+          const answer = snapshot.val();
+          if (answer && livePeerConnection && !livePeerConnection.remoteDescription) {
+            livePeerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+          }
+        });
+        firebase.database().ref(`liveStreams/${currentBroadcasterId}/viewerCandidates`).on('child_added', snapshot => {
+          const candidate = snapshot.val();
+          if (candidate && livePeerConnection) {
+            livePeerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+          }
+        });
+        firebase.database().ref(`liveStreams/${currentBroadcasterId}/views`).on('value', snapshot => {
+          const views = snapshot.val() || 0;
+          document.getElementById('live-viewCount').textContent = views + " vistas";
+        });
+      });
+    }
+    
+    function endLiveStream() {
+      if (livePeerConnection) {
+        livePeerConnection.close();
+        livePeerConnection = null;
+      }
+      firebase.database().ref(`liveStreams/${currentBroadcasterId}`).remove();
+      liveBroadcasting = false;
+      const profileImg = document.getElementById('profile-image');
+      if (profileImg) {
+        profileImg.classList.remove('live-border');
+      }
+      setTimeout(() => {
+        closeLiveStreamModal();
+      }, 3000);
+    }
+    
+    document.getElementById('live-endBtn').addEventListener('click', () => {
+      endLiveStream();
+    });
+    
+    function openLiveViewModal(broadcasterId) {
+      liveBroadcasterId = broadcasterId;
+      document.getElementById('live-view-modal').classList.remove('hidden');
+      firebase.database().ref(`liveStreams/${broadcasterId}/views`).transaction(current => (current || 0) + 1);
+      const viewerPC = new RTCPeerConnection();
+      viewerPC.onicecandidate = event => {
+        if (event.candidate) {
+          firebase.database().ref(`liveStreams/${broadcasterId}/viewerCandidates`).push(event.candidate.toJSON());
+        }
+      };
+      viewerPC.ontrack = event => {
+        document.getElementById('live-remoteVideo').srcObject = event.streams[0];
+      };
+      firebase.database().ref(`liveStreams/${broadcasterId}/offer`).once('value').then(snapshot => {
+        const offer = snapshot.val();
+        if (!offer) {
+          alert("El autor no está transmitiendo.");
+          closeLiveViewModal();
+          return;
+        }
+        viewerPC.setRemoteDescription(new RTCSessionDescription(offer))
+          .then(() => viewerPC.createAnswer())
+          .then(answer => viewerPC.setLocalDescription(answer).then(() => answer))
+          .then(answer => {
+            firebase.database().ref(`liveStreams/${broadcasterId}/answer`).set(answer);
+          });
+      });
+      firebase.database().ref(`liveStreams/${broadcasterId}`).on('value', snapshot => {
+        if (!snapshot.exists()) {
+          document.getElementById('live-endedMessage').classList.remove('hidden');
+          setTimeout(closeLiveViewModal, 3000);
+        }
+      });
+      window.currentViewerPC = viewerPC;
+    }
+    
+    function closeLiveViewModal() {
+      document.getElementById('live-view-modal').classList.add('hidden');
+      document.getElementById('live-endedMessage').classList.add('hidden');
+      if (window.currentViewerPC) {
+        window.currentViewerPC.close();
+        window.currentViewerPC = null;
+      }
+    }
+    
+    document.getElementById('live-view-closeBtn').addEventListener('click', closeLiveViewModal);
+    
+    /********** FUNCIONES DE REGALOS EN LIVE **********/
+    // Abrir el gift drawer al pulsar el botón de regalo (en la vista de transmisión para espectadores)
+    document.getElementById('gift-btn').addEventListener('click', () => {
+      document.getElementById('gift-drawer').classList.add('open');
+    });
+    function closeGiftDrawer() {
+      document.getElementById('gift-drawer').classList.remove('open');
+    }
+    // Función para enviar regalo desde la vista del espectador
+    function sendGift(giftType) {
+      const currentUser = firebase.auth().currentUser;
+      if (!currentUser || currentUser.uid === liveBroadcasterId) {
+        alert("No puedes enviar regalos a ti mismo.");
+        return;
+      }
+      let giftData = {
+        giftType: giftType,
+        senderName: currentUser.displayName || currentUser.email || "Alguien",
+        timestamp: Date.now()
+      };
+      firebase.database().ref(`liveStreams/${liveBroadcasterId}/gifts`).push(giftData);
+      closeGiftDrawer();
+    }
+    // Función para mostrar la animación del regalo en el overlay (solo para el transmisor)
+    function showGiftAnimation(giftUrl, senderName) {
+      const transmitBtn = document.getElementById('live-startBtn');
+      if(transmitBtn) transmitBtn.style.display = 'none';
+      const animContainer = document.getElementById('gift-animation');
+      animContainer.innerHTML = `
+        <div class="text-center">
+          <p class="text-white text-xl mb-2">${senderName} ha enviado un regalo</p>
+          <img src="${giftUrl}" alt="Regalo" class="mx-auto" style="max-width: 100%; max-height: 100%;">
+        </div>`;
+      animContainer.classList.add('show');
+      setTimeout(() => {
+        animContainer.classList.remove('show');
+      }, 4000);
+    }
+    
+    /********** EFECTO SKELETON **********/
+    function applySkeletonEffect() {
+      document.getElementById('profile-image').classList.add('skeleton');
+      document.getElementById('profile-username').classList.add('skeleton');
+      document.getElementById('profile-bio').classList.add('skeleton');
+      const userStories = document.getElementById('user-stories');
+      if(userStories) { userStories.classList.add('skeleton'); }
+    }
+    function removeSkeletonEffect() {
+      document.getElementById('profile-image').classList.remove('skeleton');
+      document.getElementById('profile-username').classList.remove('skeleton');
+      document.getElementById('profile-bio').classList.remove('skeleton');
+      const userStories = document.getElementById('user-stories');
+      if(userStories) { userStories.classList.remove('skeleton'); }
+    }
+    if(!navigator.onLine) { applySkeletonEffect(); }
+    window.addEventListener('offline', applySkeletonEffect);
+    window.addEventListener('online', removeSkeletonEffect);
+    
+    /********** CARGA DE HISTORIAS **********/
+    function loadStories() {
+      firebase.database().ref('stories').on('value', snapshot => {
+        let stories = [];
+        snapshot.forEach(child => { stories.push(child.val()); });
+        let newReleases = stories.sort((a, b) => b.createdAt - a.createdAt);
+        renderStories(newReleases, 'new-releases', false);
+        let top10 = stories.sort((a, b) => b.views - a.views).slice(0, 10);
+        renderStories(top10, 'top10', false);
+        let popular = stories.sort((a, b) => b.views - a.views);
+        renderStories(popular, 'popular', false);
+        let terrorStories = stories.filter(story => story.category === 'terror');
+        renderStories(terrorStories, 'terror-stories', false);
+      });
+    }
+    function renderStories(stories, elementId, editMode) {
+      const container = document.getElementById(elementId);
+      container.innerHTML = '';
+      stories.forEach(story => {
+        if (story.blocked) return;
+        const storyCard = document.createElement('div');
+        storyCard.className = 'story-card cursor-pointer relative';
+        storyCard.onclick = editMode ? () => openStoryEdit(story) : () => openStoryDetail(story);
+        storyCard.innerHTML = `
+          <div class="rounded-2xl overflow-hidden shadow-md transform transition-transform hover:scale-105">
+            <div class="story-cover-container">
+              <img src="${story.coverImage || '/api/placeholder/200/300'}" alt="${story.title}" class="story-cover-image" />
+            </div>
+          </div>
+          <div class="mt-2">
+            <h3 class="font-semibold text-sm">${story.title}</h3>
+          </div>
+        `;
+        const languageDiv = document.createElement('div');
+        languageDiv.className = "mt-1 flex items-center space-x-2";
+        languageDiv.innerHTML = `<span class="text-xs text-gray-500">Idioma: ${story.language || "N/A"}</span>`;
+        if(story.rating === "18plus") {
+          languageDiv.innerHTML += ' <span class="text-xs text-red-600 font-bold border border-red-600 rounded px-1">+18</span>';
+        }
+        storyCard.appendChild(languageDiv);
+        container.appendChild(storyCard);
+      });
+    }
+    
+    function loadUserStories(userId) {
+      const userStoriesRef = firebase.database().ref('stories').orderByChild('userId').equalTo(userId);
+      userStoriesRef.on('value', snapshot => {
+        const container = document.getElementById('user-stories');
+        container.innerHTML = "";
+        snapshot.forEach(child => {
+          const story = child.val();
+          if (story.blocked) return;
+          const card = document.createElement('div');
+          card.className = "cursor-pointer";
+          card.onclick = () => openStoryEdit(story);
+          card.innerHTML = `
+            <div class="rounded-2xl overflow-hidden shadow-md transform transition-transform hover:scale-105">
+              <img src="${story.coverImage || '/api/placeholder/200/300'}" alt="${story.title}" class="w-full h-40 object-cover">
+            </div>
+            <div class="mt-2">
+              <h3 class="font-semibold text-sm">${story.title}</h3>
+            </div>
+          `;
+          const langDiv = document.createElement('div');
+          langDiv.className = "mt-1 flex items-center space-x-2";
+          langDiv.innerHTML = `<span class="text-xs text-gray-500">Idioma: ${story.language || "N/A"}</span>`;
+          if(story.rating === "18plus") {
+            langDiv.innerHTML += ' <span class="text-xs text-red-600 font-bold border border-red-600 rounded px-1">+18</span>';
+          }
+          card.appendChild(langDiv);
+          container.appendChild(card);
+        });
+      });
+    }
+    
+    function loadAuthorStories(authorId) {
+      const authorStoriesRef = firebase.database().ref('stories').orderByChild('userId').equalTo(authorId);
+      authorStoriesRef.on('value', snapshot => {
+        const container = document.getElementById('author-stories');
+        container.innerHTML = "";
+        snapshot.forEach(child => {
+          const story = child.val();
+          if (story.blocked) return;
+          const card = document.createElement('div');
+          card.className = "cursor-pointer";
+          card.onclick = () => openStoryDetail(story);
+          card.innerHTML = `
+            <div class="rounded-2xl overflow-hidden shadow-md transform transition-transform hover:scale-105">
+              <img src="${story.coverImage || '/api/placeholder/200/300'}" alt="${story.title}" class="w-full h-40 object-cover">
+            </div>
+            <div class="mt-2">
+              <h3 class="font-semibold text-sm">${story.title}</h3>
+            </div>
+          `;
+          const langDiv = document.createElement('div');
+          langDiv.className = "mt-1 flex items-center space-x-2";
+          langDiv.innerHTML = `<span class="text-xs text-gray-500">Idioma: ${story.language || "N/A"}</span>`;
+          if(story.rating === "18plus") {
+            langDiv.innerHTML += ' <span class="text-xs text-red-600 font-bold border border-red-600 rounded px-1">+18</span>';
+          }
+          card.appendChild(langDiv);
+          container.appendChild(card);
+        });
+      });
+    }
+    
+    /********** MODAL REPORTE **********/
+    function openReportModal() {
+      document.getElementById('author-profile-modal').style.display = "none";
+      document.getElementById('report-modal').style.display = "flex";
+    }
+    function closeReportModal() {
+      document.getElementById('report-modal').style.display = "none";
+    }
+    
+    /********** SWIPE Y ANIMACIÓN EN MODAL DE USUARIO BLOQUEADO **********/
+    const blockedModal = document.getElementById('blocked-error-modal');
+    let startX = null;
+    blockedModal.addEventListener('touchstart', (e) => {
+      startX = e.touches[0].clientX;
+    });
+    blockedModal.addEventListener('touchmove', (e) => {
+      if (startX === null) return;
+      const diffX = startX - e.touches[0].clientX;
+      if (diffX > 100) { 
+        triggerBlockedModalExitAnimation();
+        startX = null;
+      }
+    });
+    function triggerBlockedModalExitAnimation() {
+      const ball1 = document.createElement('div');
+      const ball2 = document.createElement('div');
+      [ball1, ball2].forEach(ball => {
+        ball.style.position = 'absolute';
+        ball.style.width = '20px';
+        ball.style.height = '20px';
+        ball.style.backgroundColor = '#58CC02';
+        ball.style.borderRadius = '50%';
+        ball.style.transition = 'all 0.5s ease-in-out';
+      });
+      ball1.style.top = '50%';
+      ball1.style.left = '10%';
+      ball2.style.top = '50%';
+      ball2.style.left = '80%';
+      blockedModal.appendChild(ball1);
+      blockedModal.appendChild(ball2);
+      setTimeout(() => {
+        ball1.style.left = '45%';
+        ball2.style.left = '55%';
+      }, 100);
+      setTimeout(() => {
+        blockedModal.style.display = 'none';
+        ball1.remove();
+        ball2.remove();
+      }, 1000);
+    }
+    
+    /********** MODAL DE CREACIÓN DE CAPÍTULO MODERNO **********/
+    document.getElementById('font-family').addEventListener('change', function(){
+        document.getElementById('chapter-content').style.fontFamily = this.value;
+    });
+    document.getElementById('font-size').addEventListener('input', function(){
+        var size = this.value;
+        document.getElementById('chapter-content').style.fontSize = size + "px";
+        document.getElementById('font-size-value').innerText = size + "px";
+    });
+    document.getElementById('chapter-content').addEventListener('input', function(){
+        var text = this.value;
+        var words = text.trim().split(/\s+/).filter(word => word.length > 0);
+        document.getElementById('word-count').innerText = words.length + " palabras";
+        document.getElementById('letter-count').innerText = text.replace(/\s/g, "").length + " letras";
+    });
+    
+    /********** FUNCIONES PARA COMPARTIR PERFIL **********/
+    function shareProfile() {
+      const user = firebase.auth().currentUser;
+      if (!user) {
+        alert("No estás autenticado.");
+        return;
+      }
+      const profileLink = window.location.origin + window.location.pathname + "#profile/" + user.uid;
+      navigator.clipboard.writeText(profileLink)
+        .then(() => {
+          alert("Enlace copiado: " + profileLink);
+        })
+        .catch(err => {
+          alert("Error al copiar el enlace: " + err);
+        });
+    }
+    function shareAuthorProfile() {
+      if (!currentViewedAuthorId) {
+        alert("No hay perfil de autor seleccionado.");
+        return;
+      }
+      const profileLink = window.location.origin + window.location.pathname + "#profile/" + currentViewedAuthorId;
+      navigator.clipboard.writeText(profileLink)
+        .then(() => {
+          alert("Enlace copiado: " + profileLink);
+        })
+        .catch(err => {
+          alert("Error al copiar el enlace: " + err);
+        });
+    }
+    
+    /********** PERFIL DEL AUTOR **********/
+    function openAuthorProfile(authorId) {
+      document.getElementById('story-detail-modal').classList.add('hidden');
+      firebase.database().ref('users/' + authorId).once('value').then(snapshot => {
+        const authorData = snapshot.val();
+        if (!authorData || (authorData.blocked && authorData.blockedUntil && Date.now() < authorData.blockedUntil)) {
+          document.getElementById('blocked-error-modal').style.display = "flex";
+          return;
+        }
+        let authorNameHTML = authorData.username || 'Autor desconocido';
+        if (authorData.founder) { authorNameHTML += ' <span class="founder-tag">Fundador</span>'; }
+        authorNameHTML += getVerificationIcon(authorData.email || "");
+        document.getElementById('author-profile-name').innerHTML = authorNameHTML;
+        document.getElementById('author-profile-image').src = authorData.profileImage || 'https://via.placeholder.com/150';
+        document.getElementById('author-followers').textContent = formatFollowers(authorData.followersCount || 0);
+        document.getElementById('author-following').textContent = formatFollowers(authorData.followingCount || 0);
+        document.getElementById('author-rated').textContent = authorData.ratedCount || 0;
+        let socialLinksHTML = "";
+        if (authorData.instagram) {
+          socialLinksHTML += `<a href="${authorData.instagram}" target="_blank"><img src="https://img.utdstc.com/icon/847/f33/847f33af27bea889ccaa9b1d25135b42ff5bb590297182d0983afb7304d96884:200" alt="Instagram" class="w-6 h-6"></a>`;
+        }
+        if (authorData.tiktok) {
+          socialLinksHTML += `<a href="${authorData.tiktok}" target="_blank"><img src="https://cdn.pixabay.com/photo/2021/06/15/12/28/tiktok-6338432_1280.png" alt="TikTok" class="w-6 h-6"></a>`;
+        }
+        if (authorData.inkspired) {
+          socialLinksHTML += `<a href="${authorData.inkspired}" target="_blank"><img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTmCCZ41lZmMTQKuO2yydE3lFF0PGbgnLZoXA&s=10" alt="Inkspired" class="w-6 h-6"></a>`;
+        }
+        if (authorData.website) {
+          socialLinksHTML += `<a href="${authorData.website}" target="_blank"><i class="fa-solid fa-globe text-2xl"></i></a>`;
+        }
+        document.getElementById('author-social-links').innerHTML = socialLinksHTML;
+        firebase.database().ref(`liveStreams/${authorId}/isLive`).once('value').then(snapshot => {
+          if(snapshot.exists() && snapshot.val()){
+            let liveLabel = document.getElementById('live-label');
+            if (!liveLabel) {
+              liveLabel = document.createElement('span');
+              liveLabel.id = "live-label";
+              liveLabel.textContent = "EN VIVO";
+              liveLabel.className = "absolute top-0 left-0 bg-red-600 text-white px-2 py-1 rounded text-xs";
+              const container = document.getElementById('author-profile-img-container');
+              container.style.position = "relative";
+              container.appendChild(liveLabel);
+            }
+            document.getElementById('author-profile-image').classList.add('live-border');
+          } else {
+            let liveLabel = document.getElementById('live-label');
+            if(liveLabel) { liveLabel.remove(); }
+            document.getElementById('author-profile-image').classList.remove('live-border');
+          }
+        });
+      });
+      currentViewedAuthorId = authorId;
+      document.getElementById('author-profile-modal').style.display = "block";
+      updateFollowIcon();
+      loadAuthorStories(authorId);
+      document.getElementById('author-profile-image').onclick = function() {
+        firebase.database().ref(`liveStreams/${authorId}/isLive`).once('value').then(snapshot => {
+          if (snapshot.exists() && snapshot.val()) {
+            openLiveViewModal(authorId);
+          }
+        });
+      };
+    }
+    
+    function closeAuthorProfile() {
+      document.getElementById('author-profile-modal').style.display = "none";
+      if (document.getElementById('search-view').classList.contains('hidden')) {
+        document.getElementById('story-detail-modal').classList.remove('hidden');
+      }
+    }
+    
+    function closeBlockedErrorModal() {
+      document.getElementById('blocked-error-modal').style.display = "none";
+      document.getElementById('story-detail-modal').classList.remove('hidden');
+    }
+    
+    function updateFollowIcon() {
+      const currentUser = firebase.auth().currentUser;
+      if (!currentUser || !currentViewedAuthorId) return;
+      const followRef = firebase.database().ref('followers/' + currentViewedAuthorId + '/' + currentUser.uid);
+      followRef.once('value').then(snapshot => {
+        const followIcon = document.getElementById('follow-icon');
+        followIcon.src = snapshot.exists() ?
+          "https://cdn-icons-png.flaticon.com/512/907/907822.png" :
+          "https://cdn-icons-png.freepik.com/512/8370/8370007.png";
+      });
+    }
+    
+    function followAuthor() {
+      const currentUser = firebase.auth().currentUser;
+      if (!currentUser || !currentViewedAuthorId) return;
+      if (currentUser.uid === currentViewedAuthorId) {
+         alert(translations[currentLanguage].followSelfError);
+         return;
+      }
+      const followRef = firebase.database().ref('followers/' + currentViewedAuthorId + '/' + currentUser.uid);
+      followRef.once('value').then(snapshot => {
+        const followIcon = document.getElementById('follow-icon');
+        if (snapshot.exists()) {
+          followRef.remove().then(() => {
+            const authorFollowersCountRef = firebase.database().ref('users/' + currentViewedAuthorId + '/followersCount');
+            authorFollowersCountRef.transaction(current => (current || 0) - 1);
+            followIcon.src = "https://cdn-icons-png.freepik.com/512/8370/8370007.png";
+            alert(translations[currentLanguage].stoppedFollowing);
+          });
+        } else {
+          followRef.set({ followedAt: Date.now() })
+          .then(() => {
+            const authorFollowersCountRef = firebase.database().ref('users/' + currentViewedAuthorId + '/followersCount');
+            authorFollowersCountRef.transaction(current => (current || 0) + 1);
+            followIcon.src = "https://cdn-icons-png.flaticon.com/512/907/907822.png";
+            firebase.database().ref('users/' + currentUser.uid).once('value').then(userSnap => {
+              const followerName = userSnap.val().username;
+              addNotification(currentViewedAuthorId, `${followerName} te ha seguido`);
+            });
+            alert(translations[currentLanguage].nowFollowing);
+          });
+        }
+      });
+    }
+    
+    function followUser(userId) {
+      const currentUser = firebase.auth().currentUser;
+      if (!currentUser) return;
+      if (currentUser.uid === userId) {
+         alert(translations[currentLanguage].followSelfError);
+         return;
+      }
+      const followRef = firebase.database().ref('followers/' + userId + '/' + currentUser.uid);
+      followRef.once('value').then(snapshot => {
+          if (snapshot.exists()) { alert(translations[currentLanguage].alreadyFollowing); }
+          else {
+              followRef.set({ followedAt: Date.now() })
+                 .then(() => {
+                     const userFollowersCountRef = firebase.database().ref('users/' + userId + '/followersCount');
+                     userFollowersCountRef.transaction(current => (current || 0) + 1);
+                     firebase.database().ref('users/' + currentUser.uid).once('value').then(userSnap => {
+                       const followerName = userSnap.val().username;
+                       addNotification(userId, `${followerName} te ha seguido`);
+                     });
+                     alert(translations[currentLanguage].nowFollowing);
+                 });
+          }
+      });
+    }
+    
+    function openFollowingModal() {
+      const currentUser = firebase.auth().currentUser;
+      if (!currentViewedAuthorId) return;
+      if (currentUser.uid !== currentViewedAuthorId) {
+          alert("La lista de usuarios que sigue este autor es privada.");
+          return;
+      }
+      firebase.database().ref('following/' + currentViewedAuthorId).once('value').then(snapshot => {
+          const followingListDiv = document.getElementById('following-list');
+          followingListDiv.innerHTML = '';
+          snapshot.forEach(child => {
+              const followingUserId = child.key;
+              firebase.database().ref('users/' + followingUserId).once('value').then(userSnap => {
+                  const userData = userSnap.val();
+                  const followingDiv = document.createElement('div');
+                  followingDiv.className = 'flex items-center space-x-4';
+                  let verifiedIcon = getVerificationIcon(userData.email || "");
+                  followingDiv.innerHTML = `
+                    <img src="${userData.profileImage || 'https://via.placeholder.com/50'}" alt="${userData.username}" class="w-12 h-12 rounded-full object-cover" />
+                    <span class="font-semibold">${userData.username || 'Usuario'}${verifiedIcon}</span>
+                    <button onclick="followUser('${followingUserId}')" class="bg-[#58CC02] text-white p-1 rounded-full">
+                      <i class="fa-solid fa-user-plus"></i>
+                    </button>
+                  `;
+                  followingListDiv.appendChild(followingDiv);
+              });
+          });
+          document.getElementById('following-modal').style.display = "block";
+      });
+    }
+    
+    function closeFollowingModal() {
+      document.getElementById('following-modal').style.display = "none";
+    }
+    
+    /********** MODAL REPORTE **********/
+    function openReportModal() {
+      document.getElementById('author-profile-modal').style.display = "none";
+      document.getElementById('report-modal').style.display = "flex";
+    }
+    
+    function closeReportModal() {
+      document.getElementById('report-modal').style.display = "none";
+    }
+    
+    /********** LIVE STREAMING **********/
+    let liveLocalStream = null;
+    let livePeerConnection = null;
+    let liveBroadcasting = false;
+    let currentBroadcasterId = null;
+    
+    function openLiveStreamModal() {
+      const user = firebase.auth().currentUser;
+      if (!user) {
+        alert("Debes estar autenticado para transmitir en vivo.");
+        return;
+      }
+      currentBroadcasterId = user.uid;
+      document.getElementById('live-stream-modal').classList.remove('hidden');
+      navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+        .then(stream => {
+          liveLocalStream = stream;
+          document.getElementById('live-localVideo').srcObject = stream;
+        })
+        .catch(err => {
+          alert("Error al acceder a la cámara: " + err);
+        });
+      const profileImg = document.getElementById('profile-image');
+      if (profileImg) {
+        profileImg.classList.add('live-border');
+      }
+      firebase.database().ref(`liveStreams/${currentBroadcasterId}/gifts`).on('child_added', snapshot => {
+          let gift = snapshot.val();
+          let giftUrl = "";
+          if(gift.giftType === "mariposas") {
+             giftUrl = "https://i.pinimg.com/originals/7c/29/36/7c2936db7563085ef7470d50fd06e4e3.gif";
+          } else if(gift.giftType === "ballena") {
+             giftUrl = "https://i.pinimg.com/originals/86/31/83/863183316ed35cfeda7baf9ee1de0596.gif";
+          }
+          showGiftAnimation(giftUrl, gift.senderName);
+          snapshot.ref.remove();
+      });
+    }
+    
+    function closeLiveStreamModal() {
+      document.getElementById('live-stream-modal').classList.add('hidden');
+      if (liveLocalStream) {
+        liveLocalStream.getTracks().forEach(track => track.stop());
+        liveLocalStream = null;
+      }
+      if (liveBroadcasting) {
+        endLiveStream();
+      }
+      const profileImg = document.getElementById('profile-image');
+      if (profileImg) {
+        profileImg.classList.remove('live-border');
+      }
+    }
+    
+    function startLiveCountdown(duration, callback) {
+      let remaining = duration;
+      const countdownEl = document.getElementById('live-countdown');
+      countdownEl.textContent = remaining;
+      const interval = setInterval(() => {
+        remaining--;
+        if (remaining > 0) {
+          countdownEl.textContent = remaining;
+        } else {
+          clearInterval(interval);
+          countdownEl.textContent = "";
+          callback();
+        }
+      }, 1000);
+    }
+    
+    document.getElementById('live-startBtn').addEventListener('click', () => {
+      startLiveCountdown(10, () => {
+        document.getElementById('live-indicator').classList.remove('hidden');
+        document.getElementById('live-startBtn').classList.add('hidden');
+        document.getElementById('live-endBtn').classList.remove('hidden');
+        startBroadcasting();
+      });
+    });
+    
+    function startBroadcasting() {
+      livePeerConnection = new RTCPeerConnection();
+      liveLocalStream.getTracks().forEach(track => {
+        livePeerConnection.addTrack(track, liveLocalStream);
+      });
+      livePeerConnection.onicecandidate = event => {
+        if (event.candidate) {
+          firebase.database().ref(`liveStreams/${currentBroadcasterId}/candidates`).push(event.candidate.toJSON());
+        }
+      };
+      livePeerConnection.createOffer().then(offer => {
+        return livePeerConnection.setLocalDescription(offer).then(() => offer);
+      }).then(offer => {
+        firebase.database().ref(`liveStreams/${currentBroadcasterId}`).set({
+          isLive: true,
+          offer: offer,
+          views: 0
+        });
+        liveBroadcasting = true;
+        firebase.database().ref(`followers/${currentBroadcasterId}`).once('value').then(snapshot => {
+          snapshot.forEach(child => {
+            const followerId = child.key;
+            firebase.database().ref('users/' + currentBroadcasterId).once('value').then(userSnap => {
+              const username = userSnap.val().username;
+              addNotification(followerId, `${username} está transmitiendo en vivo`);
+            });
+          });
+        });
+        firebase.database().ref(`liveStreams/${currentBroadcasterId}/answer`).on('value', snapshot => {
+          const answer = snapshot.val();
+          if (answer && livePeerConnection && !livePeerConnection.remoteDescription) {
+            livePeerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+          }
+        });
+        firebase.database().ref(`liveStreams/${currentBroadcasterId}/viewerCandidates`).on('child_added', snapshot => {
+          const candidate = snapshot.val();
+          if (candidate && livePeerConnection) {
+            livePeerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+          }
+        });
+        firebase.database().ref(`liveStreams/${currentBroadcasterId}/views`).on('value', snapshot => {
+          const views = snapshot.val() || 0;
+          document.getElementById('live-viewCount').textContent = views + " vistas";
+        });
+      });
+    }
+    
+    function endLiveStream() {
+      if (livePeerConnection) {
+        livePeerConnection.close();
+        livePeerConnection = null;
+      }
+      firebase.database().ref(`liveStreams/${currentBroadcasterId}`).remove();
+      liveBroadcasting = false;
+      const profileImg = document.getElementById('profile-image');
+      if (profileImg) {
+        profileImg.classList.remove('live-border');
+      }
+      setTimeout(() => {
+        closeLiveStreamModal();
+      }, 3000);
+    }
+    
+    document.getElementById('live-endBtn').addEventListener('click', () => {
+      endLiveStream();
+    });
+    
+    function openLiveViewModal(broadcasterId) {
+      liveBroadcasterId = broadcasterId;
+      document.getElementById('live-view-modal').classList.remove('hidden');
+      firebase.database().ref(`liveStreams/${broadcasterId}/views`).transaction(current => (current || 0) + 1);
+      const viewerPC = new RTCPeerConnection();
+      viewerPC.onicecandidate = event => {
+        if (event.candidate) {
+          firebase.database().ref(`liveStreams/${broadcasterId}/viewerCandidates`).push(event.candidate.toJSON());
+        }
+      };
+      viewerPC.ontrack = event => {
+        document.getElementById('live-remoteVideo').srcObject = event.streams[0];
+      };
+      firebase.database().ref(`liveStreams/${broadcasterId}/offer`).once('value').then(snapshot => {
+        const offer = snapshot.val();
+        if (!offer) {
+          alert("El autor no está transmitiendo.");
+          closeLiveViewModal();
+          return;
+        }
+        viewerPC.setRemoteDescription(new RTCSessionDescription(offer))
+          .then(() => viewerPC.createAnswer())
+          .then(answer => viewerPC.setLocalDescription(answer).then(() => answer))
+          .then(answer => {
+            firebase.database().ref(`liveStreams/${broadcasterId}/answer`).set(answer);
+          });
+      });
+      firebase.database().ref(`liveStreams/${broadcasterId}`).on('value', snapshot => {
+        if (!snapshot.exists()) {
+          document.getElementById('live-endedMessage').classList.remove('hidden');
+          setTimeout(closeLiveViewModal, 3000);
+        }
+      });
+      window.currentViewerPC = viewerPC;
+    }
+    
+    function closeLiveViewModal() {
+      document.getElementById('live-view-modal').classList.add('hidden');
+      document.getElementById('live-endedMessage').classList.add('hidden');
+      if (window.currentViewerPC) {
+        window.currentViewerPC.close();
+        window.currentViewerPC = null;
+      }
+    }
+    
+    document.getElementById('live-view-closeBtn').addEventListener('click', closeLiveViewModal);
+    
+    /********** FUNCIONES DE REGALOS EN LIVE (USUARIO ESPECTADOR) **********/
+    document.getElementById('gift-btn').addEventListener('click', () => {
+      document.getElementById('gift-drawer').classList.add('open');
+    });
+    function closeGiftDrawer() {
+      document.getElementById('gift-drawer').classList.remove('open');
+    }
+    function sendGift(giftType) {
+      const currentUser = firebase.auth().currentUser;
+      if (!currentUser || currentUser.uid === liveBroadcasterId) {
+        alert("No puedes enviar regalos a ti mismo.");
+        return;
+      }
+      let giftData = {
+        giftType: giftType,
+        senderName: currentUser.displayName || currentUser.email || "Alguien",
+        timestamp: Date.now()
+      };
+      firebase.database().ref(`liveStreams/${liveBroadcasterId}/gifts`).push(giftData);
+      closeGiftDrawer();
+    }
+    function showGiftAnimation(giftUrl, senderName) {
+      const transmitBtn = document.getElementById('live-startBtn');
+      if(transmitBtn) transmitBtn.style.display = 'none';
+      const animContainer = document.getElementById('gift-animation');
+      animContainer.innerHTML = `
+        <div class="text-center">
+          <p class="text-white text-xl mb-2">${senderName} ha enviado un regalo</p>
+          <img src="${giftUrl}" alt="Regalo" class="mx-auto" style="max-width: 100%; max-height: 100%;">
+        </div>`;
+      animContainer.classList.add('show');
+      setTimeout(() => {
+        animContainer.classList.remove('show');
+      }, 4000);
+    }
+    
+    /********** EFECTO SKELETON **********/
+    function applySkeletonEffect() {
+      document.getElementById('profile-image').classList.add('skeleton');
+      document.getElementById('profile-username').classList.add('skeleton');
+      document.getElementById('profile-bio').classList.add('skeleton');
+      const userStories = document.getElementById('user-stories');
+      if(userStories) { userStories.classList.add('skeleton'); }
+    }
+    function removeSkeletonEffect() {
+      document.getElementById('profile-image').classList.remove('skeleton');
+      document.getElementById('profile-username').classList.remove('skeleton');
+      document.getElementById('profile-bio').classList.remove('skeleton');
+      const userStories = document.getElementById('user-stories');
+      if(userStories) { userStories.classList.remove('skeleton'); }
+    }
+    if(!navigator.onLine) { applySkeletonEffect(); }
+    window.addEventListener('offline', applySkeletonEffect);
+    window.addEventListener('online', removeSkeletonEffect);
+    
+    /********** CARGA DE HISTORIAS **********/
+    function loadStories() {
+      firebase.database().ref('stories').on('value', snapshot => {
+        let stories = [];
+        snapshot.forEach(child => { stories.push(child.val()); });
+        let newReleases = stories.sort((a, b) => b.createdAt - a.createdAt);
+        renderStories(newReleases, 'new-releases', false);
+        let top10 = stories.sort((a, b) => b.views - a.views).slice(0, 10);
+        renderStories(top10, 'top10', false);
+        let popular = stories.sort((a, b) => b.views - a.views);
+        renderStories(popular, 'popular', false);
+        let terrorStories = stories.filter(story => story.category === 'terror');
+        renderStories(terrorStories, 'terror-stories', false);
+      });
+    }
+    function renderStories(stories, elementId, editMode) {
+      const container = document.getElementById(elementId);
+      container.innerHTML = '';
+      stories.forEach(story => {
+        if (story.blocked) return;
+        const storyCard = document.createElement('div');
+        storyCard.className = 'story-card cursor-pointer relative';
+        storyCard.onclick = editMode ? () => openStoryEdit(story) : () => openStoryDetail(story);
+        storyCard.innerHTML = `
+          <div class="rounded-2xl overflow-hidden shadow-md transform transition-transform hover:scale-105">
+            <div class="story-cover-container">
+              <img src="${story.coverImage || '/api/placeholder/200/300'}" alt="${story.title}" class="story-cover-image" />
+            </div>
+          </div>
+          <div class="mt-2">
+            <h3 class="font-semibold text-sm">${story.title}</h3>
+          </div>
+        `;
+        const languageDiv = document.createElement('div');
+        languageDiv.className = "mt-1 flex items-center space-x-2";
+        languageDiv.innerHTML = `<span class="text-xs text-gray-500">Idioma: ${story.language || "N/A"}</span>`;
+        if(story.rating === "18plus") {
+          languageDiv.innerHTML += ' <span class="text-xs text-red-600 font-bold border border-red-600 rounded px-1">+18</span>';
+        }
+        storyCard.appendChild(languageDiv);
+        container.appendChild(storyCard);
+      });
+    }
+    
+    function loadUserStories(userId) {
+      const userStoriesRef = firebase.database().ref('stories').orderByChild('userId').equalTo(userId);
+      userStoriesRef.on('value', snapshot => {
+        const container = document.getElementById('user-stories');
+        container.innerHTML = "";
+        snapshot.forEach(child => {
+          const story = child.val();
+          if (story.blocked) return;
+          const card = document.createElement('div');
+          card.className = "cursor-pointer";
+          card.onclick = () => openStoryEdit(story);
+          card.innerHTML = `
+            <div class="rounded-2xl overflow-hidden shadow-md transform transition-transform hover:scale-105">
+              <img src="${story.coverImage || '/api/placeholder/200/300'}" alt="${story.title}" class="w-full h-40 object-cover">
+            </div>
+            <div class="mt-2">
+              <h3 class="font-semibold text-sm">${story.title}</h3>
+            </div>
+          `;
+          const langDiv = document.createElement('div');
+          langDiv.className = "mt-1 flex items-center space-x-2";
+          langDiv.innerHTML = `<span class="text-xs text-gray-500">Idioma: ${story.language || "N/A"}</span>`;
+          if(story.rating === "18plus") {
+            langDiv.innerHTML += ' <span class="text-xs text-red-600 font-bold border border-red-600 rounded px-1">+18</span>';
+          }
+          card.appendChild(langDiv);
+          container.appendChild(card);
+        });
+      });
+    }
+    
+    function loadAuthorStories(authorId) {
+      const authorStoriesRef = firebase.database().ref('stories').orderByChild('userId').equalTo(authorId);
+      authorStoriesRef.on('value', snapshot => {
+        const container = document.getElementById('author-stories');
+        container.innerHTML = "";
+        snapshot.forEach(child => {
+          const story = child.val();
+          if (story.blocked) return;
+          const card = document.createElement('div');
+          card.className = "cursor-pointer";
+          card.onclick = () => openStoryDetail(story);
+          card.innerHTML = `
+            <div class="rounded-2xl overflow-hidden shadow-md transform transition-transform hover:scale-105">
+              <img src="${story.coverImage || '/api/placeholder/200/300'}" alt="${story.title}" class="w-full h-40 object-cover">
+            </div>
+            <div class="mt-2">
+              <h3 class="font-semibold text-sm">${story.title}</h3>
+            </div>
+          `;
+          const langDiv = document.createElement('div');
+          langDiv.className = "mt-1 flex items-center space-x-2";
+          langDiv.innerHTML = `<span class="text-xs text-gray-500">Idioma: ${story.language || "N/A"}</span>`;
+          if(story.rating === "18plus") {
+            langDiv.innerHTML += ' <span class="text-xs text-red-600 font-bold border border-red-600 rounded px-1">+18</span>';
+          }
+          card.appendChild(langDiv);
+          container.appendChild(card);
+        });
+      });
+    }
+    
+    /********** MODAL REPORTE **********/
+    function openReportModal() {
+      document.getElementById('author-profile-modal').style.display = "none";
+      document.getElementById('report-modal').style.display = "flex";
+    }
+    function closeReportModal() {
+      document.getElementById('report-modal').style.display = "none";
+    }
+    
+    /********** ADMIN PERFIL **********/
+    function initializeAdminProfile() {
+      const user = firebase.auth().currentUser;
+      if (!user) return;
+      const profileRef = firebase.database().ref('adminProfiles/' + user.uid);
+      profileRef.once('value', snapshot => {
+        if (!snapshot.exists()) {
+          profileRef.set({
+            email: user.email,
+            photoURL: "https://via.placeholder.com/150",
+            points: 0,
+            lastDeposit: Date.now()
+          });
+        }
+      });
+    }
+    
+    function loadAdminProfile() {
+      const user = firebase.auth().currentUser;
+      if (!user) return;
+      const profileRef = firebase.database().ref('adminProfiles/' + user.uid);
+      profileRef.on('value', snapshot => {
+        const data = snapshot.val();
+        if (data) {
+          document.getElementById('adminProfilePic').src = data.photoURL || "https://via.placeholder.com/150";
+          document.getElementById('adminProfileEmail').textContent = data.email || "";
+          document.getElementById('adminProfilePoints').textContent = data.points || 0;
+        }
+      });
+    }
+    
+    function updateAdminPhotoFromOriginal() {
+      const user = firebase.auth().currentUser;
+      if (!user) return;
+      firebase.database().ref('users').orderByChild('email').equalTo(user.email).once('value')
+        .then(snapshot => {
+          snapshot.forEach(child => {
+            const data = child.val();
+            if(data.photoURL) {
+              firebase.database().ref('adminProfiles/' + user.uid).update({
+                photoURL: data.photoURL
+              });
+            }
+          });
+        })
+        .catch(error => {
+          console.error("Error al obtener la foto de perfil desde la plataforma original:", error);
+        });
+    }
+    
+    function checkAndDepositPoints() {
+      const user = firebase.auth().currentUser;
+      if (!user) return;
+      const profileRef = firebase.database().ref('adminProfiles/' + user.uid);
+      profileRef.once('value', snapshot => {
+        const data = snapshot.val();
+        if (data) {
+          const lastDeposit = data.lastDeposit || 0;
+          const now = Date.now();
+          const twoDays = 2 * 24 * 60 * 60 * 1000;
+          if (now - lastDeposit >= twoDays) {
+            const newPoints = (data.points || 0) + 500;
+            profileRef.update({
+              points: newPoints,
+              lastDeposit: now
+            }).then(() => {
+              console.log("500 puntos depositados automáticamente.");
+            }).catch(err => {
+              console.error("Error depositando puntos:", err);
+            });
+          }
+        }
+      });
+    }
+    
+    /********** HISTORIAS DE AUTORES **********/
+    // (Funciones loadAuthorsForStories, manageStories, closeStoriesModal ya definidas más arriba)
+    
+    /********** NUEVA SECCIÓN: REGALOS LIVE (ADMIN) **********/
+    // Publicar un nuevo regalo live
+    function publishGift() {
+      const title = document.getElementById('giftTitle').value.trim();
+      const price = parseInt(document.getElementById('giftPrice').value);
+      const fileInput = document.getElementById('giftFile');
+      if(!title) {
+        alert("Por favor, ingresa el título del regalo.");
+        return;
+      }
+      if(isNaN(price)) {
+        alert("Por favor, ingresa un precio válido.");
+        return;
+      }
+      if(fileInput.files.length === 0) {
+        alert("Por favor, selecciona un archivo para el regalo.");
+        return;
+      }
+      const file = fileInput.files[0];
+      const storageRef = firebase.storage().ref();
+      const giftRef = storageRef.child('liveGifts/' + Date.now() + '_' + file.name);
+      const uploadTask = giftRef.put(file);
+      uploadTask.on('state_changed', 
+        function progress(snapshot) {},
+        function error(err) {
+          alert("Error al subir el regalo: " + err.message);
+        },
+        function complete() {
+          uploadTask.snapshot.ref.getDownloadURL().then(downloadURL => {
+            const giftData = {
+              title: title,
+              price: price,
+              fileUrl: downloadURL,
+              fileType: file.type,
+              timestamp: Date.now()
+            };
+            firebase.database().ref('liveGifts').push(giftData)
+              .then(() => {
+                alert("Regalo publicado correctamente.");
+                document.getElementById('giftForm').reset();
+              })
+              .catch(err => {
+                alert("Error al publicar el regalo: " + err.message);
+              });
+          });
+        }
+      );
+    }
+    
+    document.getElementById('giftForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      publishGift();
+    });
+    
+    // Escuchar cambios en "liveGifts" para mostrar la lista en el dashboard
+    firebase.database().ref('liveGifts').on('value', function(snapshot) {
+      const giftListDiv = document.getElementById('giftList');
+      giftListDiv.innerHTML = "";
+      snapshot.forEach(function(childSnapshot) {
+        const gift = childSnapshot.val();
+        const giftKey = childSnapshot.key;
+        const div = document.createElement('div');
+        div.className = "card flex items-center justify-between";
+        let previewHtml = "";
+        if(gift.fileType.startsWith("image/")){
+          previewHtml = `<img src="${gift.fileUrl}" alt="${gift.title}" class="w-16 h-16 object-cover rounded">`;
+        } else if(gift.fileType.startsWith("video/")){
+          previewHtml = `<video src="${gift.fileUrl}" class="w-16 h-16 rounded" autoplay muted loop></video>`;
+        } else {
+          previewHtml = `<span>Archivo</span>`;
+        }
+        div.innerHTML = `
+          <div class="flex items-center space-x-4">
+            ${previewHtml}
+            <div>
+              <p class="font-bold">${gift.title}</p>
+              <p class="text-sm">${gift.price === 0 ? "Gratis" : gift.price + " monedas"}</p>
+            </div>
+          </div>
+          <button class="bg-red-500 text-white px-2 py-1 rounded" onclick="deleteGift('${giftKey}')">
+            <i class="fas fa-trash"></i>
+          </button>
+        `;
+        giftListDiv.appendChild(div);
+      });
+    });
+    
+    function deleteGift(giftKey) {
+      if(confirm("¿Estás seguro de que deseas eliminar este regalo?")) {
+        firebase.database().ref('liveGifts/' + giftKey).remove()
+          .then(() => { alert("Regalo eliminado."); })
+          .catch(err => { alert("Error al eliminar el regalo: " + err.message); });
+      }
+    }
+    
+    /********** FUNCIONES PARA COMPARTIR PERFIL **********/
+    // (Funciones shareProfile y shareAuthorProfile ya definidas)
+    
+    /********** RESTO DE CÓDIGO (historias, capítulos, etc.) **********/
+    // (Se mantienen sin cambios)
+    
   </script>
 </body>
 </html>
