@@ -16,8 +16,20 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
-  <!-- Se agrega la librería de Firebase Storage (compat) para evitar errores -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-storage-compat.js"></script>
+  <script>
+    // Configuración de Firebase (ajusta según tu proyecto)
+    const firebaseConfig = {
+      apiKey: "AIzaSyA1UV_OTjRjq22RRB1REnhWzMLZQNCB6wA",
+      authDomain: "love-alarm-5c538.firebaseapp.com",
+      databaseURL: "https://love-alarm-5c538-default-rtdb.firebaseio.com",
+      projectId: "love-alarm-5c538",
+      storageBucket: "love-alarm-5c538.appspot.com",
+      messagingSenderId: "147543369973",
+      appId: "1:147543369973:web:3ef19a73190bce85b27dbc",
+      measurementId: "G-VYVPK5VSB5"
+    };
+    firebase.initializeApp(firebaseConfig);
+  </script>
   <style>
     body { font-family: 'Nunito', sans-serif; }
     /* CABECERA FIJA */
@@ -191,7 +203,8 @@
       </form>
       <p class="mt-4 text-center">
         ¿Ya tienes cuenta? 
-        <a href="#" onclick="toggleAdminAuth(); return false;" class="underline">Inicia sesión</a>
+        <!-- Se agregó return false para prevenir la acción por defecto -->
+        <a href="#" onclick="toggleAdminAuth(event); return false;" class="underline">Inicia sesión</a>
       </p>
     </div>
   </div>
@@ -207,7 +220,8 @@
       </form>
       <p class="mt-4 text-center">
         ¿No tienes cuenta? 
-        <a href="#" onclick="toggleAdminAuth(); return false;" class="underline">Regístrate</a>
+        <!-- Se agregó return false también aquí -->
+        <a href="#" onclick="toggleAdminAuth(event); return false;" class="underline">Regístrate</a>
       </p>
     </div>
   </div>
@@ -376,7 +390,9 @@
              : "";
     }
     
-    function toggleAdminAuth(){
+    // Se modificó toggleAdminAuth para aceptar el evento y prevenir la acción por defecto
+    function toggleAdminAuth(e){
+      if(e && e.preventDefault) e.preventDefault();
       const intro = document.getElementById('adminIntro');
       const authModal = document.getElementById('adminAuthModal');
       if(intro.classList.contains('hidden')){
@@ -388,6 +404,7 @@
       }
     }
     
+    // Se cambió event.target por event.currentTarget para asegurar que se aplique el estilo al botón
     function showTab(tabName, event){
       document.querySelectorAll('.admin-tab-content').forEach(tab => tab.classList.add('hidden'));
       document.getElementById(tabName + "Tab").classList.remove('hidden');
@@ -395,7 +412,7 @@
         button.classList.remove('bg-[#58CC02]', 'text-white');
         button.classList.add('bg-gray-300', 'text-gray-700');
       });
-      event.target.classList.add('bg-[#58CC02]', 'text-white');
+      event.currentTarget.classList.add('bg-[#58CC02]', 'text-white');
     }
     
     /********** ADMIN LOGIN/REGISTRO **********/
@@ -734,106 +751,370 @@
       document.getElementById('storiesModal').classList.add('hidden');
     }
     
-    /********** NUEVA FUNCIONALIDAD: REGALOS LIVE **********/
-    // Función para publicar un nuevo regalo live
-    function publishGift() {
-      const title = document.getElementById('giftTitle').value.trim();
-      const price = parseInt(document.getElementById('giftPrice').value);
-      const fileInput = document.getElementById('giftFile');
-      if(!title) {
-        alert("Por favor, ingresa el título del regalo.");
+    /********** LIVE STREAMING (NUEVA FUNCIÓN) **********/
+    let liveLocalStream = null;
+    let livePeerConnection = null;
+    let liveBroadcasting = false;
+    let currentBroadcasterId = null;
+    
+    function openLiveStreamModal() {
+      const user = firebase.auth().currentUser;
+      if (!user) {
+        alert("Debes estar autenticado para transmitir en vivo.");
         return;
       }
-      if(isNaN(price)) {
-        alert("Por favor, ingresa un precio válido.");
-        return;
+      currentBroadcasterId = user.uid;
+      document.getElementById('live-stream-modal').classList.remove('hidden');
+      navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+        .then(stream => {
+          liveLocalStream = stream;
+          document.getElementById('live-localVideo').srcObject = stream;
+        })
+        .catch(err => {
+          alert("Error al acceder a la cámara: " + err);
+        });
+      const profileImg = document.getElementById('profile-image');
+      if (profileImg) {
+        profileImg.classList.add('live-border');
       }
-      if(fileInput.files.length === 0) {
-        alert("Por favor, selecciona un archivo para el regalo.");
-        return;
-      }
-      const file = fileInput.files[0];
-      const storageRef = firebase.storage().ref();
-      // Usamos la fecha y el nombre del archivo para crear un identificador único
-      const giftRef = storageRef.child('liveGifts/' + Date.now() + '_' + file.name);
-      const uploadTask = giftRef.put(file);
-      uploadTask.on('state_changed', 
-        function progress(snapshot) {
-          // Puedes agregar feedback de progreso aquí si lo deseas
-        },
-        function error(err) {
-          alert("Error al subir el regalo: " + err.message);
-        },
-        function complete() {
-          uploadTask.snapshot.ref.getDownloadURL().then(downloadURL => {
-            const giftData = {
-              title: title,
-              price: price,
-              fileUrl: downloadURL,
-              fileType: file.type,
-              timestamp: Date.now()
-            };
-            firebase.database().ref('liveGifts').push(giftData)
-              .then(() => {
-                alert("Regalo publicado correctamente.");
-                document.getElementById('giftForm').reset();
-              })
-              .catch(err => {
-                alert("Error al publicar el regalo: " + err.message);
-              });
-          });
-        }
-      );
+      firebase.database().ref(`liveStreams/${currentBroadcasterId}/gifts`).on('child_added', snapshot => {
+          let gift = snapshot.val();
+          let giftUrl = "";
+          if(gift.giftType === "mariposas") {
+             giftUrl = "https://i.pinimg.com/originals/7c/29/36/7c2936db7563085ef7470d50fd06e4e3.gif";
+          } else if(gift.giftType === "ballena") {
+             giftUrl = "https://i.pinimg.com/originals/86/31/83/863183316ed35cfeda7baf9ee1de0596.gif";
+          }
+          showGiftAnimation(giftUrl, gift.senderName);
+          snapshot.ref.remove();
+      });
     }
     
-    // Listener para el formulario de regalo
-    document.getElementById('giftForm').addEventListener('submit', function(e) {
-      e.preventDefault();
-      publishGift();
-    });
+    function closeLiveStreamModal() {
+      document.getElementById('live-stream-modal').classList.add('hidden');
+      if (liveLocalStream) {
+        liveLocalStream.getTracks().forEach(track => track.stop());
+        liveLocalStream = null;
+      }
+      if (liveBroadcasting) {
+        endLiveStream();
+      }
+      const profileImg = document.getElementById('profile-image');
+      if (profileImg) {
+        profileImg.classList.remove('live-border');
+      }
+    }
     
-    // Escuchar cambios en la rama 'liveGifts' y actualizar la lista de regalos
-    firebase.database().ref('liveGifts').on('value', function(snapshot) {
-      const giftListDiv = document.getElementById('giftList');
-      giftListDiv.innerHTML = "";
-      snapshot.forEach(function(childSnapshot) {
-        const gift = childSnapshot.val();
-        const giftKey = childSnapshot.key;
-        const div = document.createElement('div');
-        div.className = "card flex items-center justify-between";
-        let previewHtml = "";
-        if(gift.fileType.startsWith("image/")){
-          previewHtml = `<img src="${gift.fileUrl}" alt="${gift.title}" class="w-16 h-16 object-cover rounded">`;
-        } else if(gift.fileType.startsWith("video/")){
-          previewHtml = `<video src="${gift.fileUrl}" class="w-16 h-16 rounded" autoplay muted loop></video>`;
+    function startLiveCountdown(duration, callback) {
+      let remaining = duration;
+      const countdownEl = document.getElementById('live-countdown');
+      countdownEl.textContent = remaining;
+      const interval = setInterval(() => {
+        remaining--;
+        if (remaining > 0) {
+          countdownEl.textContent = remaining;
         } else {
-          previewHtml = `<span>Archivo</span>`;
+          clearInterval(interval);
+          countdownEl.textContent = "";
+          callback();
         }
-        div.innerHTML = `
-          <div class="flex items-center space-x-4">
-            ${previewHtml}
-            <div>
-              <p class="font-bold">${gift.title}</p>
-              <p class="text-sm">${gift.price === 0 ? "Gratis" : gift.price + " monedas"}</p>
-            </div>
-          </div>
-          <button class="bg-red-500 text-white px-2 py-1 rounded" onclick="deleteGift('${giftKey}')">
-            <i class="fas fa-trash"></i>
-          </button>
-        `;
-        giftListDiv.appendChild(div);
+      }, 1000);
+    }
+    
+    document.getElementById('live-startBtn').addEventListener('click', () => {
+      startLiveCountdown(10, () => {
+        document.getElementById('live-indicator').classList.remove('hidden');
+        document.getElementById('live-startBtn').classList.add('hidden');
+        document.getElementById('live-endBtn').classList.remove('hidden');
+        startBroadcasting();
       });
     });
     
-    function deleteGift(giftKey) {
-      if(confirm("¿Estás seguro de que deseas eliminar este regalo?")) {
-        firebase.database().ref('liveGifts/' + giftKey).remove()
-          .then(() => { alert("Regalo eliminado."); })
-          .catch(err => { alert("Error al eliminar el regalo: " + err.message); });
+    function startBroadcasting() {
+      livePeerConnection = new RTCPeerConnection();
+      liveLocalStream.getTracks().forEach(track => {
+        livePeerConnection.addTrack(track, liveLocalStream);
+      });
+      livePeerConnection.onicecandidate = event => {
+        if (event.candidate) {
+          firebase.database().ref(`liveStreams/${currentBroadcasterId}/candidates`).push(event.candidate.toJSON());
+        }
+      };
+      livePeerConnection.createOffer().then(offer => {
+        return livePeerConnection.setLocalDescription(offer).then(() => offer);
+      }).then(offer => {
+        firebase.database().ref(`liveStreams/${currentBroadcasterId}`).set({
+          isLive: true,
+          offer: offer,
+          views: 0
+        });
+        liveBroadcasting = true;
+        firebase.database().ref(`followers/${currentBroadcasterId}`).once('value').then(snapshot => {
+          snapshot.forEach(child => {
+            const followerId = child.key;
+            firebase.database().ref('users/' + currentBroadcasterId).once('value').then(userSnap => {
+              const username = userSnap.val().username;
+              addNotification(followerId, `${username} está transmitiendo en vivo`);
+            });
+          });
+        });
+        firebase.database().ref(`liveStreams/${currentBroadcasterId}/answer`).on('value', snapshot => {
+          const answer = snapshot.val();
+          if (answer && livePeerConnection && !livePeerConnection.remoteDescription) {
+            livePeerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+          }
+        });
+        firebase.database().ref(`liveStreams/${currentBroadcasterId}/viewerCandidates`).on('child_added', snapshot => {
+          const candidate = snapshot.val();
+          if (candidate && livePeerConnection) {
+            livePeerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+          }
+        });
+        firebase.database().ref(`liveStreams/${currentBroadcasterId}/views`).on('value', snapshot => {
+          const views = snapshot.val() || 0;
+          document.getElementById('live-viewCount').textContent = views + " vistas";
+        });
+      });
+    }
+    
+    function endLiveStream() {
+      if (livePeerConnection) {
+        livePeerConnection.close();
+        livePeerConnection = null;
+      }
+      firebase.database().ref(`liveStreams/${currentBroadcasterId}`).remove();
+      liveBroadcasting = false;
+      const profileImg = document.getElementById('profile-image');
+      if (profileImg) {
+        profileImg.classList.remove('live-border');
+      }
+      setTimeout(() => {
+        closeLiveStreamModal();
+      }, 3000);
+    }
+    
+    document.getElementById('live-endBtn').addEventListener('click', () => {
+      endLiveStream();
+    });
+    
+    function openLiveViewModal(broadcasterId) {
+      liveBroadcasterId = broadcasterId;
+      document.getElementById('live-view-modal').classList.remove('hidden');
+      firebase.database().ref(`liveStreams/${broadcasterId}/views`).transaction(current => (current || 0) + 1);
+      const viewerPC = new RTCPeerConnection();
+      viewerPC.onicecandidate = event => {
+        if (event.candidate) {
+          firebase.database().ref(`liveStreams/${broadcasterId}/viewerCandidates`).push(event.candidate.toJSON());
+        }
+      };
+      viewerPC.ontrack = event => {
+        document.getElementById('live-remoteVideo').srcObject = event.streams[0];
+      };
+      firebase.database().ref(`liveStreams/${broadcasterId}/offer`).once('value').then(snapshot => {
+        const offer = snapshot.val();
+        if (!offer) {
+          alert("El autor no está transmitiendo.");
+          closeLiveViewModal();
+          return;
+        }
+        viewerPC.setRemoteDescription(new RTCSessionDescription(offer))
+          .then(() => viewerPC.createAnswer())
+          .then(answer => viewerPC.setLocalDescription(answer).then(() => answer))
+          .then(answer => {
+            firebase.database().ref(`liveStreams/${broadcasterId}/answer`).set(answer);
+          });
+      });
+      firebase.database().ref(`liveStreams/${broadcasterId}`).on('value', snapshot => {
+        if (!snapshot.exists()) {
+          document.getElementById('live-endedMessage').classList.remove('hidden');
+          setTimeout(closeLiveViewModal, 3000);
+        }
+      });
+      window.currentViewerPC = viewerPC;
+    }
+    
+    function closeLiveViewModal() {
+      document.getElementById('live-view-modal').classList.add('hidden');
+      document.getElementById('live-endedMessage').classList.add('hidden');
+      if (window.currentViewerPC) {
+        window.currentViewerPC.close();
+        window.currentViewerPC = null;
       }
     }
     
-    /********** NUEVA FUNCIONALIDAD: PERFIL DEL ADMINISTRADOR **********/
+    document.getElementById('live-view-closeBtn').addEventListener('click', closeLiveViewModal);
+    
+    /********** FUNCIONES DE REGALOS EN LIVE (USUARIO ESPECTADOR) **********/
+    document.getElementById('gift-btn').addEventListener('click', () => {
+      document.getElementById('gift-drawer').classList.add('open');
+    });
+    function closeGiftDrawer() {
+      document.getElementById('gift-drawer').classList.remove('open');
+    }
+    function sendGift(giftType) {
+      const currentUser = firebase.auth().currentUser;
+      if (!currentUser || currentUser.uid === liveBroadcasterId) {
+        alert("No puedes enviar regalos a ti mismo.");
+        return;
+      }
+      let giftData = {
+        giftType: giftType,
+        senderName: currentUser.displayName || currentUser.email || "Alguien",
+        timestamp: Date.now()
+      };
+      firebase.database().ref(`liveStreams/${liveBroadcasterId}/gifts`).push(giftData);
+      closeGiftDrawer();
+    }
+    function showGiftAnimation(giftUrl, senderName) {
+      const transmitBtn = document.getElementById('live-startBtn');
+      if(transmitBtn) transmitBtn.style.display = 'none';
+      const animContainer = document.getElementById('gift-animation');
+      animContainer.innerHTML = `
+        <div class="text-center">
+          <p class="text-white text-xl mb-2">${senderName} ha enviado un regalo</p>
+          <img src="${giftUrl}" alt="Regalo" class="mx-auto" style="max-width: 100%; max-height: 100%;">
+        </div>`;
+      animContainer.classList.add('show');
+      setTimeout(() => {
+        animContainer.classList.remove('show');
+      }, 4000);
+    }
+    
+    /********** EFECTO SKELETON **********/
+    function applySkeletonEffect() {
+      document.getElementById('profile-image').classList.add('skeleton');
+      document.getElementById('profile-username').classList.add('skeleton');
+      document.getElementById('profile-bio').classList.add('skeleton');
+      const userStories = document.getElementById('user-stories');
+      if(userStories) { userStories.classList.add('skeleton'); }
+    }
+    function removeSkeletonEffect() {
+      document.getElementById('profile-image').classList.remove('skeleton');
+      document.getElementById('profile-username').classList.remove('skeleton');
+      document.getElementById('profile-bio').classList.remove('skeleton');
+      const userStories = document.getElementById('user-stories');
+      if(userStories) { userStories.classList.remove('skeleton'); }
+    }
+    if(!navigator.onLine) { applySkeletonEffect(); }
+    window.addEventListener('offline', applySkeletonEffect);
+    window.addEventListener('online', removeSkeletonEffect);
+    
+    /********** CARGA DE HISTORIAS **********/
+    function loadStories() {
+      firebase.database().ref('stories').on('value', snapshot => {
+        let stories = [];
+        snapshot.forEach(child => { stories.push(child.val()); });
+        let newReleases = stories.sort((a, b) => b.createdAt - a.createdAt);
+        renderStories(newReleases, 'new-releases', false);
+        let top10 = stories.sort((a, b) => b.views - a.views).slice(0, 10);
+        renderStories(top10, 'top10', false);
+        let popular = stories.sort((a, b) => b.views - a.views);
+        renderStories(popular, 'popular', false);
+        let terrorStories = stories.filter(story => story.category === 'terror');
+        renderStories(terrorStories, 'terror-stories', false);
+      });
+    }
+    function renderStories(stories, elementId, editMode) {
+      const container = document.getElementById(elementId);
+      container.innerHTML = '';
+      stories.forEach(story => {
+        if (story.blocked) return;
+        const storyCard = document.createElement('div');
+        storyCard.className = 'story-card cursor-pointer relative';
+        storyCard.onclick = editMode ? () => openStoryEdit(story) : () => openStoryDetail(story);
+        storyCard.innerHTML = `
+          <div class="rounded-2xl overflow-hidden shadow-md transform transition-transform hover:scale-105">
+            <div class="story-cover-container">
+              <img src="${story.coverImage || '/api/placeholder/200/300'}" alt="${story.title}" class="story-cover-image" />
+            </div>
+          </div>
+          <div class="mt-2">
+            <h3 class="font-semibold text-sm">${story.title}</h3>
+          </div>
+        `;
+        const languageDiv = document.createElement('div');
+        languageDiv.className = "mt-1 flex items-center space-x-2";
+        languageDiv.innerHTML = `<span class="text-xs text-gray-500">Idioma: ${story.language || "N/A"}</span>`;
+        if(story.rating === "18plus") {
+          languageDiv.innerHTML += ' <span class="text-xs text-red-600 font-bold border border-red-600 rounded px-1">+18</span>';
+        }
+        storyCard.appendChild(languageDiv);
+        container.appendChild(storyCard);
+      });
+    }
+    
+    function loadUserStories(userId) {
+      const userStoriesRef = firebase.database().ref('stories').orderByChild('userId').equalTo(userId);
+      userStoriesRef.on('value', snapshot => {
+        const container = document.getElementById('user-stories');
+        container.innerHTML = "";
+        snapshot.forEach(child => {
+          const story = child.val();
+          if (story.blocked) return;
+          const card = document.createElement('div');
+          card.className = "cursor-pointer";
+          card.onclick = () => openStoryEdit(story);
+          card.innerHTML = `
+            <div class="rounded-2xl overflow-hidden shadow-md transform transition-transform hover:scale-105">
+              <img src="${story.coverImage || '/api/placeholder/200/300'}" alt="${story.title}" class="w-full h-40 object-cover">
+            </div>
+            <div class="mt-2">
+              <h3 class="font-semibold text-sm">${story.title}</h3>
+            </div>
+          `;
+          const langDiv = document.createElement('div');
+          langDiv.className = "mt-1 flex items-center space-x-2";
+          langDiv.innerHTML = `<span class="text-xs text-gray-500">Idioma: ${story.language || "N/A"}</span>`;
+          if(story.rating === "18plus") {
+            langDiv.innerHTML += ' <span class="text-xs text-red-600 font-bold border border-red-600 rounded px-1">+18</span>';
+          }
+          card.appendChild(langDiv);
+          container.appendChild(card);
+        });
+      });
+    }
+    
+    function loadAuthorStories(authorId) {
+      const authorStoriesRef = firebase.database().ref('stories').orderByChild('userId').equalTo(authorId);
+      authorStoriesRef.on('value', snapshot => {
+        const container = document.getElementById('author-stories');
+        container.innerHTML = "";
+        snapshot.forEach(child => {
+          const story = child.val();
+          if (story.blocked) return;
+          const card = document.createElement('div');
+          card.className = "cursor-pointer";
+          card.onclick = () => openStoryDetail(story);
+          card.innerHTML = `
+            <div class="rounded-2xl overflow-hidden shadow-md transform transition-transform hover:scale-105">
+              <img src="${story.coverImage || '/api/placeholder/200/300'}" alt="${story.title}" class="w-full h-40 object-cover">
+            </div>
+            <div class="mt-2">
+              <h3 class="font-semibold text-sm">${story.title}</h3>
+            </div>
+          `;
+          const langDiv = document.createElement('div');
+          langDiv.className = "mt-1 flex items-center space-x-2";
+          langDiv.innerHTML = `<span class="text-xs text-gray-500">Idioma: ${story.language || "N/A"}</span>`;
+          if(story.rating === "18plus") {
+            langDiv.innerHTML += ' <span class="text-xs text-red-600 font-bold border border-red-600 rounded px-1">+18</span>';
+          }
+          card.appendChild(langDiv);
+          container.appendChild(card);
+        });
+      });
+    }
+    
+    /********** MODAL REPORTE **********/
+    function openReportModal() {
+      document.getElementById('author-profile-modal').style.display = "none";
+      document.getElementById('report-modal').style.display = "flex";
+    }
+    function closeReportModal() {
+      document.getElementById('report-modal').style.display = "none";
+    }
+    
+    /********** ADMIN PERFIL **********/
     function initializeAdminProfile() {
       const user = firebase.auth().currentUser;
       if (!user) return;
@@ -908,8 +1189,112 @@
       });
     }
     
-    /********** RESTO DEL CÓDIGO (historias, capítulos, etc.) **********/
-    // (Se mantienen sin cambios, incluyendo las duplicaciones de funciones para historias, live streaming, etc.)
+    /********** HISTORIAS DE AUTORES **********/
+    // (Funciones loadAuthorsForStories, manageStories, closeStoriesModal ya definidas más arriba)
+    
+    /********** NUEVA SECCIÓN: REGALOS LIVE (ADMIN) **********/
+    // Publicar un nuevo regalo live
+    function publishGift() {
+      const title = document.getElementById('giftTitle').value.trim();
+      const price = parseInt(document.getElementById('giftPrice').value);
+      const fileInput = document.getElementById('giftFile');
+      if(!title) {
+        alert("Por favor, ingresa el título del regalo.");
+        return;
+      }
+      if(isNaN(price)) {
+        alert("Por favor, ingresa un precio válido.");
+        return;
+      }
+      if(fileInput.files.length === 0) {
+        alert("Por favor, selecciona un archivo para el regalo.");
+        return;
+      }
+      const file = fileInput.files[0];
+      const storageRef = firebase.storage().ref();
+      // Usamos la fecha y el nombre del archivo para crear un identificador único
+      const giftRef = storageRef.child('liveGifts/' + Date.now() + '_' + file.name);
+      const uploadTask = giftRef.put(file);
+      uploadTask.on('state_changed', 
+        function progress(snapshot) {
+          // Puedes agregar feedback de progreso aquí si lo deseas
+        },
+        function error(err) {
+          alert("Error al subir el regalo: " + err.message);
+        },
+        function complete() {
+          uploadTask.snapshot.ref.getDownloadURL().then(downloadURL => {
+            const giftData = {
+              title: title,
+              price: price,
+              fileUrl: downloadURL,
+              fileType: file.type,
+              timestamp: Date.now()
+            };
+            firebase.database().ref('liveGifts').push(giftData)
+              .then(() => {
+                alert("Regalo publicado correctamente.");
+                document.getElementById('giftForm').reset();
+              })
+              .catch(err => {
+                alert("Error al publicar el regalo: " + err.message);
+              });
+          });
+        }
+      );
+    }
+    
+    document.getElementById('giftForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      publishGift();
+    });
+    
+    // Escuchar cambios en "liveGifts" para mostrar la lista en el dashboard
+    firebase.database().ref('liveGifts').on('value', function(snapshot) {
+      const giftListDiv = document.getElementById('giftList');
+      giftListDiv.innerHTML = "";
+      snapshot.forEach(function(childSnapshot) {
+        const gift = childSnapshot.val();
+        const giftKey = childSnapshot.key;
+        const div = document.createElement('div');
+        div.className = "card flex items-center justify-between";
+        let previewHtml = "";
+        if(gift.fileType.startsWith("image/")){
+          previewHtml = `<img src="${gift.fileUrl}" alt="${gift.title}" class="w-16 h-16 object-cover rounded">`;
+        } else if(gift.fileType.startsWith("video/")){
+          previewHtml = `<video src="${gift.fileUrl}" class="w-16 h-16 rounded" autoplay muted loop></video>`;
+        } else {
+          previewHtml = `<span>Archivo</span>`;
+        }
+        div.innerHTML = `
+          <div class="flex items-center space-x-4">
+            ${previewHtml}
+            <div>
+              <p class="font-bold">${gift.title}</p>
+              <p class="text-sm">${gift.price === 0 ? "Gratis" : gift.price + " monedas"}</p>
+            </div>
+          </div>
+          <button class="bg-red-500 text-white px-2 py-1 rounded" onclick="deleteGift('${giftKey}')">
+            <i class="fas fa-trash"></i>
+          </button>
+        `;
+        giftListDiv.appendChild(div);
+      });
+    });
+    
+    function deleteGift(giftKey) {
+      if(confirm("¿Estás seguro de que deseas eliminar este regalo?")) {
+        firebase.database().ref('liveGifts/' + giftKey).remove()
+          .then(() => { alert("Regalo eliminado."); })
+          .catch(err => { alert("Error al eliminar el regalo: " + err.message); });
+      }
+    }
+    
+    /********** FUNCIONES PARA COMPARTIR PERFIL **********/
+    // (Funciones shareProfile y shareAuthorProfile ya definidas)
+    
+    /********** RESTO DE CÓDIGO (historias, capítulos, etc.) **********/
+    // (Se mantienen sin cambios)
     
   </script>
 </body>
