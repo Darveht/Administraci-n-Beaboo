@@ -305,11 +305,12 @@
       display: none;
     }
     
+    /* ---------------------------------------------------------------- */
     /* NUEVO: Estilos para el panel de estadísticas en edición (división de monedas) */
     .stats-panel > div:not(:last-child) {
       border-right: 1px solid #ccc;
     }
-    /* NUEVO: Estilos para el Gift Drawer (drawer de regalos que se desliza desde abajo) */
+    /* NUEVO: Estilos para el Gift Drawer (barra de regalos) */
     #gift-drawer {
       position: fixed;
       bottom: 0;
@@ -345,41 +346,24 @@
       margin-top: 4px;
       display: block;
     }
-    /* NUEVO: Estilos para la animación del regalo (overlay) – se mostrará solo para el transmisor */
+    /* NUEVO: Estilos para la animación del regalo (overlay) */
     #gift-animation {
       position: fixed;
+      bottom: 0;
       left: 0;
       right: 0;
-      bottom: 0;
-      height: 50vh;
+      top: 0;
       display: flex;
       align-items: center;
       justify-content: center;
       pointer-events: none;
       z-index: 11000;
       opacity: 0;
-      transition: opacity 0.3s ease, transform 0.5s ease-out;
+      transition: opacity 0.3s ease;
     }
     #gift-animation.show {
       opacity: 1;
-      animation: slideUp 0.5s ease-out;
     }
-    @keyframes slideUp {
-      from { transform: translateY(100%); }
-      to { transform: translateY(0); }
-    }
-    /* Pseudo-element para el efecto difuminado en la parte superior del contenedor de regalo */
-    #gift-animation::before {
-      content: "";
-      position: absolute;
-      top: -20px;
-      left: 0;
-      right: 0;
-      height: 20px;
-      background: linear-gradient(to bottom, rgba(0,0,0,0.5), transparent);
-      pointer-events: none;
-    }
-    /* ----------------- FIN MODIFICACIONES AGREGADAS ----------------- */
   </style>
   <script>
     /*********************** BLOQUEO DE ACCESO EN COMPUTADORAS (Móvil obligatorio) ***********************/
@@ -1267,7 +1251,7 @@
         <div id="live-countdown" class="text-6xl font-bold text-[#58CC02]"></div>
         <div id="live-indicator" class="hidden text-4xl font-bold text-red-600">EN VIVO</div>
       </div>
-      <!-- Botón para iniciar transmisión: Se quita el texto para que solo se muestre el cronómetro -->
+      <!-- Botón para iniciar transmisión: Se quita el texto para que luego aparezca solo el cronómetro -->
       <button id="live-startBtn" class="absolute bottom-10 left-1/2 transform -translate-x-1/2 bg-red-600 text-white text-2xl rounded-full p-6"></button>
       <!-- Botón para finalizar transmisión -->
       <button id="live-endBtn" class="absolute top-4 right-4 bg-gray-800 text-white text-lg rounded p-2 hidden">
@@ -1277,7 +1261,6 @@
       <button id="live-closeBtn" onclick="closeLiveStreamModal()" class="absolute top-4 left-4 bg-gray-800 text-white text-lg rounded p-2">
         X
       </button>
-      <!-- NUEVO: Aquí se elimina el listener inline y se usará la función listenForGifts() -->
     </div>
   </div>
 
@@ -1318,7 +1301,7 @@
     </div>
   </div>
 
-  <!-- NUEVO: Contenedor para la animación del regalo (overlay) – se mostrará solo para el transmisor -->
+  <!-- NUEVO: Contenedor para la animación del regalo (overlay) -->
   <div id="gift-animation">
     <!-- Se inyectará contenido dinámicamente -->
   </div>
@@ -2131,7 +2114,7 @@
           socialLinksHTML += `<a href="${authorData.website}" target="_blank"><i class="fa-solid fa-globe text-2xl"></i></a>`;
         }
         document.getElementById('author-social-links').innerHTML = socialLinksHTML;
-        // NUEVO: Verificar si el autor está transmitiendo. Si es así, agregar el badge y el borde; si no, quitarlos.
+        // NUEVO: Verificar si el autor está transmitiendo. Si es así, agregar el badge y el borde; si no, asegurarse de quitarlos.
         firebase.database().ref(`liveStreams/${authorId}/isLive`).once('value').then(snapshot => {
           if(snapshot.exists() && snapshot.val()){
             let liveLabel = document.getElementById('live-label');
@@ -2769,35 +2752,6 @@
     let liveBroadcasting = false;
     let currentBroadcasterId = null; // UID del autor que transmite
 
-    // NUEVO: Variables y funciones para detectar regalos (gifts)
-    let giftListenerRef = null;
-    function giftListenerCallback(snapshot) {
-      let gift = snapshot.val();
-      let giftUrl = "";
-      if(gift.giftType === "mariposas") {
-         giftUrl = "https://i.pinimg.com/originals/7c/29/36/7c2936db7563085ef7470d50fd06e4e3.gif";
-      } else if(gift.giftType === "ballena") {
-         giftUrl = "https://i.pinimg.com/originals/86/31/83/863183316ed35cfeda7baf9ee1de0596.gif";
-      } else if(gift.giftType === "video") {
-         // Asumimos que si es un video, se provee una URL en gift.fileUrl
-         giftUrl = gift.fileUrl || "";
-      }
-      showGiftAnimation(giftUrl, gift.senderName);
-      snapshot.ref.remove();
-    }
-    function listenForGifts() {
-      // Se asegura de que currentBroadcasterId esté definido
-      if (!currentBroadcasterId) return;
-      giftListenerRef = firebase.database().ref(`liveStreams/${currentBroadcasterId}/gifts`);
-      giftListenerRef.on('child_added', giftListenerCallback);
-    }
-    function stopListeningForGifts() {
-      if (giftListenerRef) {
-        giftListenerRef.off('child_added', giftListenerCallback);
-        giftListenerRef = null;
-      }
-    }
-
     // Abrir el modal de transmisión en vivo (para el autor)
     function openLiveStreamModal() {
       const user = firebase.auth().currentUser;
@@ -2821,14 +2775,11 @@
       if (profileImg) {
         profileImg.classList.add('live-border');
       }
-      // NUEVO: Escuchar nuevos regalos enviados al transmisor
-      listenForGifts();
     }
 
     // Cerrar el modal de transmisión en vivo y detener la transmisión
     function closeLiveStreamModal() {
       document.getElementById('live-stream-modal').classList.add('hidden');
-      // Detener el stream de la cámara
       if (liveLocalStream) {
         liveLocalStream.getTracks().forEach(track => track.stop());
         liveLocalStream = null;
@@ -2836,13 +2787,10 @@
       if (liveBroadcasting) {
         endLiveStream();
       }
-      // Quitar el borde animado de la foto de perfil
       const profileImg = document.getElementById('profile-image');
       if (profileImg) {
         profileImg.classList.remove('live-border');
       }
-      // NUEVO: Detener la escucha de regalos
-      stopListeningForGifts();
     }
 
     // Función para iniciar la cuenta regresiva de 10 segundos
@@ -3009,41 +2957,36 @@
         alert("No puedes enviar regalos a ti mismo.");
         return;
       }
-      // Actualizamos las monedas del transmisor: sumamos 5
+      // En este ejemplo, se simula el envío actualizando las monedas del transmisor (por ejemplo, +5 monedas)
       firebase.database().ref('users/' + liveBroadcasterId).transaction(userData => {
         if (userData) {
           userData.coins = (userData.coins || 0) + 5;
         }
         return userData;
       }).then(() => {
-        // Enviar la información del regalo a Firebase para que el broadcaster lo reciba
-        let giftData = {
-          giftType: giftType,
-          senderName: currentUser.displayName || currentUser.email || "Alguien",
-          timestamp: Date.now()
-        };
-        firebase.database().ref(`liveStreams/${liveBroadcasterId}/gifts`).push(giftData);
+        // Mostrar animación de regalo en la pantalla (para autor y remitente)
+        let giftUrl = "";
+        if(giftType === "mariposas") {
+          giftUrl = "https://i.pinimg.com/originals/7c/29/36/7c2936db7563085ef7470d50fd06e4e3.gif";
+        } else if(giftType === "ballena") {
+          giftUrl = "https://i.pinimg.com/originals/86/31/83/863183316ed35cfeda7baf9ee1de0596.gif";
+        }
+        showGiftAnimation(giftUrl, currentUser.displayName || currentUser.email || "Alguien");
         closeGiftDrawer();
       }).catch(error => {
         console.error("Error al enviar regalo:", error);
       });
     }
-    // Función para mostrar la animación del regalo en un overlay durante 4 segundos (sólo para el transmisor)
+    // Función para mostrar la animación del regalo en un overlay durante 4 segundos
     function showGiftAnimation(giftUrl, senderName) {
-      // Opcional: ocultar el botón de transmitir (si sigue apareciendo)
-      const transmitBtn = document.getElementById('live-startBtn');
-      if(transmitBtn) transmitBtn.style.display = 'none';
-      
       const animContainer = document.getElementById('gift-animation');
-      animContainer.innerHTML = `
-        <div class="text-center">
-          <p class="text-white text-xl mb-2">${senderName} ha enviado un regalo</p>
-          <img src="${giftUrl}" alt="Regalo" class="mx-auto" style="max-width: 100%; max-height: 100%;">
+      animContainer.innerHTML = `<div class="bg-black bg-opacity-50 text-white p-4 rounded-xl text-center">
+           <p>${senderName} ha enviado un regalo</p>
+           <img src="${giftUrl}" alt="Regalo" class="w-24 h-24 mx-auto">
         </div>`;
       animContainer.classList.add('show');
       setTimeout(() => {
         animContainer.classList.remove('show');
-        // Opcional: volver a mostrar el botón de transmitir si fuera necesario
       }, 4000);
     }
   </script>
