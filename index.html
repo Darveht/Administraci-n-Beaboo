@@ -1176,65 +1176,22 @@
   </div>
 
   <!-- MODAL DE PERFIL DEL AUTOR -->
-  <div id="author-profile-modal" class="fixed inset-0 overflow-y-auto z-50 hidden">
-    <div class="p-4">
-      <button onclick="closeAuthorProfile()" class="text-[#58CC02] mb-4 flex items-center">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 inline mr-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <polyline points="15 18 9 12 15 6" />
-        </svg>
-        <span id="btn-volver-author">Volver</span>
-      </button>
-      <div class="flex flex-col items-center" id="author-profile-content">
-        <!-- Se envuelve la imagen en un contenedor para poder posicionar el label "EN VIVO" -->
-        <div id="author-profile-img-container" class="relative">
-          <img id="author-profile-image" src="https://via.placeholder.com/150" class="w-24 h-24 rounded-full object-cover" alt="Foto del autor">
-        </div>
-        <h2 id="author-profile-name" class="text-xl font-bold mt-2"></h2>
-        <!-- NUEVO: Se agregó este párrafo para mostrar la biografía del autor -->
-        <p id="author-bio" class="text-center text-gray-600 mt-2"></p>
-        <div id="author-social-links" class="flex space-x-4 mt-4"></div>
-        <!-- NUEVO: Botón para compartir perfil en el modal del autor -->
-        <button id="share-author-btn" onclick="shareAuthorProfile()" class="mt-4 w-full bg-gray-300 text-black p-3 rounded-xl flex items-center justify-center">
-          <i class="fa-solid fa-share mr-2"></i> Compartir perfil
-        </button>
-        <hr class="section-divider">
-        <div class="flex items-center justify-center w-full">
-          <div class="flex-1 flex items-center justify-center">
-            <button id="follow-button" onclick="followAuthor()" class="p-2 rounded-full" title="Seguir/Dejar de seguir">
-              <img id="follow-icon" src="https://cdn-icons-png.flaticon.com/512/907/907822.png" alt="Seguir" class="w-6 h-6">
-            </button>
-          </div>
-          <div class="w-px h-8 bg-gray-300 mx-4"></div>
-          <div class="flex-1 flex items-center justify-center">
-            <button id="report-button" onclick="openReportModal()" class="p-2 rounded-full" title="Reportar">
-              <img src="https://cdn-icons-png.flaticon.com/512/4083/4083296.png" alt="Reportar" class="w-6 h-6">
-            </button>
-          </div>
-        </div>
-        <hr class="section-divider">
-        <div class="flex space-x-4 w-full justify-around">
-          <div class="text-center">
-            <button onclick="openFollowersModal()" class="focus:outline-none">
-              <span id="author-followers" class="font-bold">0</span>
-              <p class="text-sm">Seguidores</p>
-            </button>
-          </div>
-          <div class="text-center">
-            <button onclick="openFollowingModal()" class="focus:outline-none">
-              <span id="author-following" class="font-bold">0</span>
-              <p class="text-sm">Siguiendo</p>
-            </button>
-          </div>
-          <div class="text-center">
-            <span id="author-rated" class="font-bold">0</span>
-            <p class="text-sm">Calificaciones</p>
-          </div>
-        </div>
-        <hr class="section-divider">
-        <div class="mt-4 w-full">
-          <h3 id="author-stories-title" class="text-lg font-bold mb-2">Historias del autor</h3>
-          <div id="author-stories" class="grid grid-cols-2 gap-4"></div>
-        </div>
+  <div id="author-profile-modal" class="fixed inset-0 bg-black bg-opacity-0 flex items-center justify-center z-50 hidden">
+    <div class="bg-white w-full h-full relative overflow-y-auto p-8 pt-16">
+      <button onclick="closeAuthorProfile()" class="absolute top-4 left-4 text-gray-500 hover:text-gray-700 text-3xl z-10">&larr;</button>
+      <img id="detail-cover" src="/api/placeholder/800/400" alt="Portada de la historia" class="w-full h-auto rounded-2xl mb-6 shadow-lg" />
+      <h2 id="detail-title" class="text-3xl font-bold mb-2 text-[#58CC02]">Título de la historia</h2>
+      <!-- Se usa innerHTML para permitir el icono de verificación -->
+      <p id="detail-author" class="text-gray-700 mb-4 cursor-pointer" onclick="openAuthorProfile(this.dataset.userid)"></p>
+      <p id="detail-synopsis" class="mb-6">Sinopsis de la historia...</p>
+      <div id="detail-metrics" class="flex flex-wrap gap-4 text-gray-700 text-sm font-medium">
+        <span><strong>0</strong> Visitas</span>
+        <span><strong>0</strong> Calificación</span>
+        <span><strong>0</strong> Capítulos</span>
+      </div>
+      <div>
+        <h3 id="detail-chapters-title" class="text-2xl font-semibold mb-4">Capítulos</h3>
+        <ul id="detail-chapters" class="space-y-4"></ul>
       </div>
     </div>
   </div>
@@ -1413,7 +1370,7 @@
         followSelfError: "No puedes seguirte a ti mismo.",
         nowFollowing: "Ahora sigues a este autor.",
         stoppedFollowing: "Has dejado de seguir a este autor.",
-        alreadyFollowing: "Ya sigues a este usuario.",
+        alreadyFollowing: "Ya sigues este usuario.",
         storyDeleted: "Historia eliminada.",
         editLater: "Puedes editar tu historia más tarde desde tu perfil."
       },
@@ -2386,35 +2343,56 @@
       }
     });
     function openStoryCreation() {
+      console.log("Abriendo vista de creación de historia");
+      // Ocultamos la vista principal para que el formulario se muestre en primer plano
+      document.getElementById('main-app').classList.add('hidden');
       document.getElementById('story-creation-view').classList.remove('hidden');
       document.getElementById('story-details-view').classList.add('hidden');
       document.getElementById('story-edit-view').classList.add('hidden');
     }
-    function closeStoryCreation() { document.getElementById('story-creation-view').classList.add('hidden'); }
-    function selectStoryType(type) {
-      storyTypeSelected = type;
+    function closeStoryCreation() {
+      console.log("Cerrando vista de creación de historia");
       document.getElementById('story-creation-view').classList.add('hidden');
-      document.getElementById('story-details-view').classList.remove('hidden');
+      document.getElementById('main-app').classList.remove('hidden');
     }
     function backToStoryType() {
       document.getElementById('story-details-view').classList.add('hidden');
       document.getElementById('story-creation-view').classList.remove('hidden');
     }
-    function validateCoverImage(file) {
-      return new Promise((resolve, reject) => {
-        const url = URL.createObjectURL(file);
-        const img = new Image();
-        img.onload = function() {
-          const ratio = img.naturalWidth / img.naturalHeight;
-          if (ratio > 3 || ratio < 0.3) { URL.revokeObjectURL(url); reject("La imagen de portada tiene un formato no permitido (posible screenshot)."); }
-          else { URL.revokeObjectURL(url); resolve(); }
-        };
-        img.onerror = function() { URL.revokeObjectURL(url); reject("Error al cargar la imagen."); };
-        img.src = url;
-      });
+    function selectStoryType(type) {
+      storyTypeSelected = type;
+      document.getElementById('story-creation-view').classList.add('hidden');
+      document.getElementById('story-details-view').classList.remove('hidden');
     }
-
-    /*********************** CAPÍTULOS **************************/
+    function openStoryEdit(story) {
+      currentEditingStory = story;
+      // Cargar el idioma actual en el selector de edición
+      document.getElementById('edit-story-language').value = story.language || "";
+      firebase.database().ref('stories/' + story.id + '/chapters').on('value', snapshot => {
+        currentChapters = [];
+        const chapterListDiv = document.getElementById('chapter-list');
+        chapterListDiv.innerHTML = "";
+        snapshot.forEach(child => {
+          const chapter = child.val();
+          chapter.id = child.key;
+          currentChapters.push(chapter);
+        });
+        currentChapters.sort((a, b) => a.chapterNumber - b.chapterNumber);
+        currentChapters.forEach(chapter => {
+          const div = document.createElement('div');
+          div.className = "flex justify-between items-center p-4 border border-gray-200 rounded-xl";
+          div.innerHTML = `<span>${translations[currentLanguage].readChapter} ${chapter.chapterNumber}</span>
+                           <button class="bg-[#58CC02] text-white px-2 py-1 rounded" onclick="openChapterReadModal('${story.id}', '${chapter.id}')">Leer</button>`;
+          chapterListDiv.appendChild(div);
+        });
+      });
+      document.getElementById('story-edit-view').classList.remove('hidden');
+    }
+    function closeStoryEdit() {
+      document.getElementById('story-edit-view').classList.add('hidden');
+      alert(translations[currentLanguage].editLater);
+    }
+    /*********************** MODAL DE CREACIÓN DE CAPÍTULO MODERNO **************************/
     function openChapterCreationModal() { 
       document.getElementById('chapter-creation-modal').style.display = "flex"; 
     }
@@ -2989,6 +2967,45 @@
         animContainer.classList.remove('show');
       }, 4000);
     }
+
+    /*********************** FUNCIONES DE PUBLICACIÓN ***********************/
+    // Función para abrir la vista de creación de historias:
+    function openStoryCreation() {
+      console.log("Abriendo vista de creación de historia");
+      // Ocultamos la vista principal para que el formulario se muestre en primer plano
+      document.getElementById('main-app').classList.add('hidden');
+      document.getElementById('story-creation-view').classList.remove('hidden');
+      document.getElementById('story-details-view').classList.add('hidden');
+      document.getElementById('story-edit-view').classList.add('hidden');
+    }
+
+    // Función para cerrar la vista de creación y volver a la principal:
+    function closeStoryCreation() {
+      console.log("Cerrando vista de creación de historia");
+      document.getElementById('story-creation-view').classList.add('hidden');
+      document.getElementById('main-app').classList.remove('hidden');
+    }
+
+    // Función para volver a la selección de tipo de historia desde la vista de detalles
+    function backToStoryType() {
+      document.getElementById('story-details-view').classList.add('hidden');
+      document.getElementById('story-creation-view').classList.remove('hidden');
+    }
+
+    // Función para seleccionar el tipo de historia y pasar a la siguiente vista (detalles)
+    function selectStoryType(type) {
+      storyTypeSelected = type;
+      document.getElementById('story-creation-view').classList.add('hidden');
+      document.getElementById('story-details-view').classList.remove('hidden');
+    }
+
+    /*********************** Resto del Código Original ***********************/
+    // Aquí se encuentran las demás funciones ya incluidas en el código original,
+    // como openHome, openSearch, openNotifications, openProfile, manejo de modales,
+    // autenticación con Firebase, gestión de historias, capítulos, transmisiones en vivo, etc.
+    
+    // … (código original continúa)
+    
   </script>
 </body>
 </html>
