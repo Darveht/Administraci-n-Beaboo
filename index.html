@@ -166,7 +166,6 @@
     /* --------------------- NUEVA SECCIÓN: REGALOS LIVE --------------------- */
     /* Nueva pestaña en la barra de tabs */
     nav.tabs button.giftsTabBtn {
-      /* Inicialmente con fondo gris (no activa) */
       background-color: #ccc;
       color: #333;
     }
@@ -184,6 +183,21 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
+    }
+    /* ------------------------------------------------------------------------- */
+    
+    /* --------------------- NUEVA SECCIÓN: SONIDO DE NOTIFICACIÓN --------------------- */
+    /* Nueva pestaña en la barra de tabs para el sonido de notificación */
+    nav.tabs button.notificationSoundTabBtn {
+      background-color: #ccc;
+      color: #333;
+    }
+    /* Sección de sonido de notificación */
+    #notificationSoundTab {
+      padding: 1rem;
+    }
+    #notificationSoundTab .card {
+      padding: 1rem;
     }
     /* ------------------------------------------------------------------------- */
   </style>
@@ -250,13 +264,17 @@
       <button class="admin-tab px-4 py-2 bg-gray-300 text-gray-700 rounded" onclick="showTab('stories', event)">
         <i class="fas fa-book mr-1"></i> Historias
       </button>
-      <!-- NUEVA PESTAÑA: Transmisiones en Vivo -->
+      <!-- Sección Transmisiones en Vivo -->
       <button class="admin-tab px-4 py-2 bg-gray-300 text-gray-700 rounded" onclick="showTab('lives', event)">
         <i class="fas fa-video mr-1"></i> Transmisiones en Vivo
       </button>
-      <!-- NUEVA PESTAÑA: REGALOS LIVE -->
+      <!-- Sección Regalos Live -->
       <button class="admin-tab giftsTabBtn px-4 py-2 bg-gray-300 text-gray-700 rounded" onclick="showTab('gifts', event)">
         <i class="fas fa-gift mr-1"></i> Regalos Live
+      </button>
+      <!-- NUEVA SECCIÓN: Sonido de Notificación -->
+      <button class="admin-tab notificationSoundTabBtn px-4 py-2 bg-gray-300 text-gray-700 rounded" onclick="showTab('notificationSound', event)">
+        <i class="fas fa-music mr-1"></i> Sonido Notificación
       </button>
       <button class="admin-tab px-4 py-2 bg-gray-300 text-gray-700 rounded" onclick="showTab('profile', event)">
         <i class="fas fa-user mr-1"></i> Perfil
@@ -295,12 +313,12 @@
         <h2 class="text-2xl font-bold mb-4">Historias por Autor</h2>
         <div id="authorsList" class="space-y-4"></div>
       </section>
-      <!-- NUEVA SECCIÓN: Transmisiones en Vivo -->
+      <!-- Sección Transmisiones en Vivo -->
       <section id="livesTab" class="admin-tab-content hidden">
         <h2 class="text-2xl font-bold mb-4">Transmisiones en Vivo</h2>
         <div id="liveStreamsList" class="space-y-4"></div>
       </section>
-      <!-- NUEVA SECCIÓN: REGALOS LIVE -->
+      <!-- Sección Regalos Live -->
       <section id="giftsTab" class="admin-tab-content hidden">
         <h2 class="text-2xl font-bold mb-4">Administrar Regalos Live</h2>
         <!-- Formulario para subir un nuevo regalo -->
@@ -318,7 +336,23 @@
         <!-- Lista de regalos existentes -->
         <div id="giftList" class="space-y-4"></div>
       </section>
-      <!-- NUEVA SECCIÓN: PERFIL -->
+      <!-- NUEVA SECCIÓN: Sonido de Notificación -->
+      <section id="notificationSoundTab" class="admin-tab-content hidden">
+        <h2 class="text-2xl font-bold mb-4">Subir Sonido de Notificación</h2>
+        <div class="card mb-4">
+          <form id="notificationSoundForm" class="space-y-4">
+            <input type="file" id="notificationSoundFile" accept="audio/*" class="w-full p-3 border rounded">
+            <button type="submit" class="w-full bg-[#58CC02] text-white p-3 rounded flex items-center justify-center">
+              <i class="fas fa-upload mr-2"></i> Subir Sonido
+            </button>
+          </form>
+        </div>
+        <div id="currentNotificationSound" class="mt-4">
+          <p class="font-bold">Sonido actual:</p>
+          <audio id="currentNotificationAudio" controls class="mt-2"></audio>
+        </div>
+      </section>
+      <!-- Sección Perfil del Administrador -->
       <section id="profileTab" class="admin-tab-content hidden">
         <h2 class="text-2xl font-bold mb-4">Perfil del Administrador</h2>
         <div class="card flex flex-col items-center">
@@ -771,7 +805,7 @@
       document.getElementById('storiesModal').classList.add('hidden');
     }
     
-    /********** TRANSMISIONES EN VIVO (NUEVA SECCIÓN) **********/
+    /********** TRANSMISIONES EN VIVO **********/
     function loadLiveStreams(){
       const liveStreamsRef = firebase.database().ref('liveStreams');
       liveStreamsRef.on('value', snapshot => {
@@ -810,7 +844,7 @@
       }
     }
     
-    /********** LIVE STREAMING (Funciones existentes) **********/
+    /********** LIVE STREAMING **********/
     let liveLocalStream = null;
     let livePeerConnection = null;
     let liveBroadcasting = false;
@@ -836,6 +870,7 @@
       if (profileImg) {
         profileImg.classList.add('live-border');
       }
+      // También se escucha el nodo de regalos en vivo
       firebase.database().ref(`liveStreams/${currentBroadcasterId}/gifts`).on('child_added', snapshot => {
           let gift = snapshot.val();
           let giftUrl = "";
@@ -1249,22 +1284,99 @@
     }
     
     /********** MODAL DE ACCESO BLOQUEADO (Duolingo Style) **********/
-    // Función para mostrar el modal de acceso bloqueado
     function showAccessBlockedModal() {
       document.getElementById('accessBlockedModal').classList.remove('hidden');
     }
-    
-    // Función que se ejecuta al hacer clic en "Cerrar"
     function handleBlockedAccess() {
-      // Puedes redirigir a otra página o cerrar sesión
       window.location.href = 'https://tusitio.com';
     }
     
-    // Ejemplo: activar el modal si se cumple cierta condición
-    // Reemplaza "condicionBloqueo" con la lógica real de bloqueo
-    const condicionBloqueo = true; // Simulación: acceso bloqueado
-    if (condicionBloqueo) {
-      showAccessBlockedModal();
+    /********** NUEVA SECCIÓN: SONIDO DE NOTIFICACIÓN (ADMIN) **********/
+    // Al subir un nuevo sonido, se actualizará el nodo "adminNotificationSound" en la base de datos.
+    document.getElementById('notificationSoundForm').addEventListener('submit', function(e){
+      e.preventDefault();
+      const fileInput = document.getElementById('notificationSoundFile');
+      const file = fileInput.files[0];
+      if (!file) {
+        alert("Por favor, selecciona un archivo de audio.");
+        return;
+      }
+      // Subir a Firebase Storage
+      const storageRef = firebase.storage().ref();
+      const soundRef = storageRef.child('notificationSounds/' + file.name);
+      const uploadTask = soundRef.put(file);
+      uploadTask.on('state_changed', null, error => {
+        console.error("Error al subir sonido:", error);
+        alert("Error al subir sonido.");
+      }, () => {
+        uploadTask.snapshot.ref.getDownloadURL().then(downloadURL => {
+          // Actualizar el nodo adminNotificationSound en la base de datos
+          firebase.database().ref('adminNotificationSound').set(downloadURL)
+            .then(() => {
+              alert("Sonido de notificación actualizado correctamente.");
+              // Actualizar el audio en la sección actual del admin
+              document.getElementById('currentNotificationAudio').src = downloadURL;
+            })
+            .catch(err => {
+              console.error("Error al actualizar la URL en la base de datos:", err);
+            });
+        });
+      });
+    });
+    
+    // Opcional: Cargar el sonido actual (si existe) en la sección del admin
+    function loadNotificationSound(){
+      firebase.database().ref('adminNotificationSound').once('value')
+        .then(snapshot => {
+          const soundURL = snapshot.val();
+          if(soundURL){
+            document.getElementById('currentNotificationAudio').src = soundURL;
+          }
+        })
+        .catch(err => {
+          console.error("Error al cargar el sonido de notificación:", err);
+        });
+    }
+    loadNotificationSound();
+    
+    /********** SONIDO DE NOTIFICACIÓN PARA USUARIOS (Código Original que se integra en la app principal) **********/
+    // Esta función reproducirá el sonido de notificación (ya sea el subido por el admin o el por defecto)
+    function playNotificationSound() {
+      var audio = document.getElementById('notification-sound');
+      if (audio) {
+        audio.play().catch(err => console.error("Error al reproducir el sonido de notificación:", err));
+      }
+    }
+    
+    // Detector: cuando se añade una notificación nueva para el usuario, se reproduce el sonido.
+    firebase.auth().onAuthStateChanged(user => {
+      if (user) {
+        const notificationsRef = firebase.database().ref('notifications/' + user.uid);
+        let initialNotificationKeys = new Set();
+        notificationsRef.once('value').then(snapshot => {
+          snapshot.forEach(childSnapshot => {
+            initialNotificationKeys.add(childSnapshot.key);
+          });
+          notificationsRef.on('child_added', childSnapshot => {
+            if (!initialNotificationKeys.has(childSnapshot.key)) {
+              playNotificationSound();
+            }
+          });
+        });
+      }
+    });
+    
+    /********** NUEVA FUNCIÓN: DETECTOR DE SONIDO ADMIN (Ya integrado en la app principal) **********/
+    function updateAdminNotificationSound() {
+      const adminSoundRef = firebase.database().ref('adminNotificationSound');
+      adminSoundRef.on('value', snapshot => {
+        const soundURL = snapshot.val();
+        if(soundURL) {
+          var audio = document.getElementById('notification-sound');
+          audio.src = soundURL;
+          audio.load();
+        }
+      });
     }
     
   </script>
