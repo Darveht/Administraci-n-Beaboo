@@ -16,7 +16,7 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
-  <!-- Agregamos Firebase Storage para la subida de archivos -->
+  <!-- Firebase Storage -->
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-storage-compat.js"></script>
   <script>
     // Configuración de Firebase (ajusta según tu proyecto)
@@ -59,9 +59,9 @@
     }
     /* Contenedor principal para el dashboard */
     #adminDashboardMain {
-      margin-top: 120px; /* espacio para header y pestañas */
+      margin-top: 120px;
     }
-    /* Tarjetas (cards) para cada sección */
+    /* Tarjetas (cards) */
     .card {
       background-color: #fff;
       padding: 1rem;
@@ -91,7 +91,7 @@
       50% { transform: scale(1); opacity: 0.5; }
       100% { transform: scale(0); opacity: 0; }
     }
-    /* Modal de respuesta (Reply Modal) */
+    /* Modal de respuesta */
     #replyModal {
       position: fixed;
       inset: 0;
@@ -127,7 +127,7 @@
       max-height: 90vh;
       overflow-y: auto;
     }
-    /* Estilo Duolingo para el modal de registro/inicio de sesión */
+    /* Estilo Duolingo para modal de registro/login */
     .duolingo-modal {
       background: linear-gradient(135deg, #4CAF50, #8BC34A);
       color: white;
@@ -142,16 +142,14 @@
       border-radius: 9999px;
       margin-top: 1rem;
     }
-    .duolingo-modal input {
-      width: 100%;
-    }
+    .duolingo-modal input { width: 100%; }
     .duolingo-modal button {
       background-color: white;
       color: #4CAF50;
       font-weight: bold;
       width: 100%;
     }
-    /* Mensaje para historias bloqueadas en la plataforma original */
+    /* Mensaje para historias bloqueadas */
     .blocked-story {
       background-color: #f2f2f2;
       color: #888;
@@ -162,42 +160,47 @@
       font-size: 0.9rem;
       font-weight: bold;
     }
-    /* Para que los modales del dashboard se muestren en primer plano */
+    /* Modales del dashboard */
     #adminDashboard, #adminAuthModal { z-index: 50; }
-    
-    /* --------------------- NUEVA SECCIÓN: REGALOS LIVE --------------------- */
-    /* Nueva pestaña en la barra de tabs */
+    /* Sección de Regalos Live */
     nav.tabs button.giftsTabBtn {
-      /* Inicialmente con fondo gris (no activa) */
       background-color: #ccc;
       color: #333;
     }
-    /* Sección de regalos live en el dashboard */
-    #giftsTab {
-      padding: 1rem;
-    }
-    /* Formulario para subir regalo */
+    #giftsTab { padding: 1rem; }
     #giftForm input,
-    #giftForm button {
-      margin-top: 0.75rem;
-    }
-    /* Contenedor para la lista de regalos */
+    #giftForm button { margin-top: 0.75rem; }
     #giftList .card {
       display: flex;
       justify-content: space-between;
       align-items: center;
     }
-    /* ------------------------------------------------------------------------- */
+    /* Toast (mensaje de confirmación) */
+    #toast {
+      position: fixed;
+      top: 1rem;
+      right: 1rem;
+      background-color: #4CAF50;
+      color: white;
+      padding: 0.75rem 1rem;
+      border-radius: 0.5rem;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+      z-index: 1000;
+      opacity: 0;
+      transition: opacity 0.5s;
+    }
+    #toast.show { opacity: 1; }
   </style>
 </head>
 <body class="bg-gray-100">
+  <!-- Toast de confirmación -->
+  <div id="toast"></div>
+  
   <!-- PANTALLA DE INTRO Y REGISTRO/LOGIN -->
   <div id="adminIntro" class="min-h-screen flex flex-col items-center justify-center relative">
-    <!-- Imagen de fondo similar a tu intro original -->
     <img src="https://ideogram.ai/assets/image/lossless/response/Mj2UkJSlRUi5-nusIdo7CA" alt="Intro" class="absolute inset-0 w-full h-full object-cover opacity-50">
     <div class="duolingo-modal max-w-md mx-auto z-10">
       <h2 class="text-3xl font-bold mb-4 text-center">Bienvenido al Panel de Administración</h2>
-      <!-- Formulario de registro (se puede alternar con el de inicio de sesión) -->
       <form id="adminRegisterForm" class="space-y-4">
         <input type="email" id="adminRegEmail" placeholder="Correo electrónico" required>
         <input type="password" id="adminRegPassword" placeholder="Contraseña" required>
@@ -205,7 +208,6 @@
       </form>
       <p class="mt-4 text-center">
         ¿Ya tienes cuenta? 
-        <!-- Se agregó return false para prevenir la acción por defecto -->
         <a href="#" onclick="toggleAdminAuth(event); return false;" class="underline">Inicia sesión</a>
       </p>
     </div>
@@ -222,22 +224,19 @@
       </form>
       <p class="mt-4 text-center">
         ¿No tienes cuenta? 
-        <!-- Se agregó return false también aquí -->
         <a href="#" onclick="toggleAdminAuth(event); return false;" class="underline">Regístrate</a>
       </p>
     </div>
   </div>
   
-  <!-- DASHBOARD DEL ADMIN (se muestra después del login) -->
+  <!-- DASHBOARD DEL ADMIN -->
   <div id="adminDashboard" class="hidden">
-    <!-- CABECERA FIJA -->
     <header class="flex items-center justify-between">
       <h1 class="text-2xl font-bold">Panel de Administración</h1>
       <button onclick="adminSignOut()" class="bg-red-500 text-white px-3 py-2 rounded flex items-center">
         <i class="fas fa-sign-out-alt mr-2"></i> Cerrar Sesión
       </button>
     </header>
-    <!-- Barra de pestañas -->
     <nav class="tabs mt-20">
       <button class="admin-tab px-4 py-2 bg-[#58CC02] text-white rounded" onclick="showTab('reports', event)">
         <i class="fas fa-flag mr-1"></i> Reportes
@@ -254,7 +253,6 @@
       <button class="admin-tab px-4 py-2 bg-gray-300 text-gray-700 rounded" onclick="showTab('stories', event)">
         <i class="fas fa-book mr-1"></i> Historias
       </button>
-      <!-- NUEVA PESTAÑA: REGALOS LIVE -->
       <button class="admin-tab giftsTabBtn px-4 py-2 bg-gray-300 text-gray-700 rounded" onclick="showTab('gifts', event)">
         <i class="fas fa-gift mr-1"></i> Regalos Live
       </button>
@@ -262,7 +260,6 @@
         <i class="fas fa-user mr-1"></i> Perfil
       </button>
     </nav>
-    <!-- Contenido principal del dashboard -->
     <main id="adminDashboardMain" class="container mx-auto px-4">
       <!-- Sección Reportes -->
       <section id="reportsTab" class="admin-tab-content">
@@ -295,7 +292,7 @@
         <h2 class="text-2xl font-bold mb-4">Historias por Autor</h2>
         <div id="authorsList" class="space-y-4"></div>
       </section>
-      <!-- NUEVA SECCIÓN: REGALOS LIVE -->
+      <!-- Sección Regalos Live -->
       <section id="giftsTab" class="admin-tab-content hidden">
         <h2 class="text-2xl font-bold mb-4">Administrar Regalos Live</h2>
         <!-- Formulario para subir un nuevo regalo -->
@@ -313,7 +310,7 @@
         <!-- Lista de regalos existentes -->
         <div id="giftList" class="space-y-4"></div>
       </section>
-      <!-- NUEVA SECCIÓN: PERFIL -->
+      <!-- Sección Perfil -->
       <section id="profileTab" class="admin-tab-content hidden">
         <h2 class="text-2xl font-bold mb-4">Perfil del Administrador</h2>
         <div class="card flex flex-col items-center">
@@ -383,6 +380,16 @@
     }
     function hideSpinner(){
       document.getElementById('loadingSpinner').style.display = "none";
+    }
+    
+    /********** FUNCIONES DE TOAST (CONFIRMACIÓN) **********/
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.classList.add('show');
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, 3000);
     }
     
     /********** UTILIDADES DE ESTILO **********/
@@ -1190,7 +1197,7 @@
     }
     
     /********** NUEVA SECCIÓN: REGALOS LIVE (ADMIN) **********/
-    // Publicar un nuevo regalo live desde el panel de administración
+    // Publicar un nuevo regalo live
     function publishGift() {
       const title = document.getElementById('giftTitle').value.trim();
       const price = parseInt(document.getElementById('giftPrice').value);
@@ -1209,12 +1216,12 @@
       }
       const file = fileInput.files[0];
       const storageRef = firebase.storage().ref();
-      // Subimos a la carpeta "Live" en Storage para que coincida con la estructura de la plataforma original
+      // Subir a la carpeta "Live" en Storage
       const giftRef = storageRef.child('Live/' + Date.now() + '_' + file.name);
       const uploadTask = giftRef.put(file);
       uploadTask.on('state_changed', 
         function progress(snapshot) {
-          // Aquí puedes mostrar feedback de progreso si lo deseas
+          // Opcional: mostrar progreso
         },
         function error(err) {
           alert("Error al subir el regalo: " + err.message);
@@ -1228,10 +1235,10 @@
               fileType: file.type,
               timestamp: Date.now()
             };
-            // Guardamos la información en el nodo 'liveStreams/Live/gifts'
+            // Guardar en el nodo "liveStreams/Live/gifts"
             firebase.database().ref('liveStreams/Live/gifts').push(giftData)
               .then(() => {
-                alert("Regalo publicado correctamente.");
+                showToast("Regalo '" + title + "' publicado correctamente.");
                 document.getElementById('giftForm').reset();
               })
               .catch(err => {
@@ -1247,7 +1254,7 @@
       publishGift();
     });
     
-    // Escuchar cambios en "liveStreams/Live/gifts" para mostrar la lista en el dashboard
+    // Escuchar cambios en "liveStreams/Live/gifts" para mostrar la lista
     firebase.database().ref('liveStreams/Live/gifts').on('value', function(snapshot) {
       const giftListDiv = document.getElementById('giftList');
       giftListDiv.innerHTML = "";
@@ -1289,10 +1296,10 @@
     }
     
     /********** FUNCIONES PARA COMPARTIR PERFIL **********/
-    // (Aquí se pueden incluir funciones shareProfile y shareAuthorProfile según las necesites)
+    // Aquí podrías incluir las funciones shareProfile y shareAuthorProfile si lo deseas.
     
     /********** RESTO DEL CÓDIGO (historias, capítulos, etc.) **********/
-    // Se mantienen sin cambios
+    // Se mantienen sin cambios.
   </script>
 </body>
 </html>
