@@ -16,7 +16,7 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
-  <!-- Firebase Storage -->
+  <!-- Firebase Storage (para subir archivos) -->
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-storage-compat.js"></script>
   <script>
     // Configuración de Firebase (ajusta según tu proyecto)
@@ -59,7 +59,7 @@
     }
     /* Contenedor principal para el dashboard */
     #adminDashboardMain {
-      margin-top: 120px;
+      margin-top: 120px; /* espacio para header y pestañas */
     }
     /* Tarjetas (cards) */
     .card {
@@ -91,7 +91,7 @@
       50% { transform: scale(1); opacity: 0.5; }
       100% { transform: scale(0); opacity: 0; }
     }
-    /* Modal de respuesta */
+    /* Modal de respuesta (Reply Modal) */
     #replyModal {
       position: fixed;
       inset: 0;
@@ -127,7 +127,7 @@
       max-height: 90vh;
       overflow-y: auto;
     }
-    /* Estilo Duolingo para modal de registro/login */
+    /* Estilo Duolingo para modal de registro/inicio de sesión */
     .duolingo-modal {
       background: linear-gradient(135deg, #4CAF50, #8BC34A);
       color: white;
@@ -160,7 +160,7 @@
       font-size: 0.9rem;
       font-weight: bold;
     }
-    /* Modales del dashboard */
+    /* Para que los modales del dashboard se muestren en primer plano */
     #adminDashboard, #adminAuthModal { z-index: 50; }
     /* Sección de Regalos Live */
     nav.tabs button.giftsTabBtn {
@@ -175,7 +175,7 @@
       justify-content: space-between;
       align-items: center;
     }
-    /* Toast (mensaje de confirmación) */
+    /* Estilos para el Toast de confirmación */
     #toast {
       position: fixed;
       top: 1rem;
@@ -253,6 +253,7 @@
       <button class="admin-tab px-4 py-2 bg-gray-300 text-gray-700 rounded" onclick="showTab('stories', event)">
         <i class="fas fa-book mr-1"></i> Historias
       </button>
+      <!-- NUEVA PESTAÑA: REGALOS LIVE -->
       <button class="admin-tab giftsTabBtn px-4 py-2 bg-gray-300 text-gray-700 rounded" onclick="showTab('gifts', event)">
         <i class="fas fa-gift mr-1"></i> Regalos Live
       </button>
@@ -292,16 +293,16 @@
         <h2 class="text-2xl font-bold mb-4">Historias por Autor</h2>
         <div id="authorsList" class="space-y-4"></div>
       </section>
-      <!-- Sección Regalos Live -->
+      <!-- SECCIÓN: REGALOS LIVE -->
       <section id="giftsTab" class="admin-tab-content hidden">
         <h2 class="text-2xl font-bold mb-4">Administrar Regalos Live</h2>
         <!-- Formulario para subir un nuevo regalo -->
         <div class="card mb-4">
           <h3 class="text-xl font-bold mb-2">Subir Nuevo Regalo</h3>
           <form id="giftForm" class="space-y-4">
-            <input type="text" id="giftTitle" placeholder="Título del regalo" class="w-full p-3 border rounded">
-            <input type="number" id="giftPrice" placeholder="Precio en monedas (0 para gratis)" min="0" class="w-full p-3 border rounded">
-            <input type="file" id="giftFile" accept="image/*,video/*,image/svg+xml" class="w-full p-3 border rounded">
+            <input type="text" id="giftTitle" placeholder="Título del regalo" class="w-full p-3 border rounded" required>
+            <input type="number" id="giftPrice" placeholder="Precio en monedas (0 para gratis)" min="0" class="w-full p-3 border rounded" required>
+            <input type="file" id="giftFile" accept="image/*,video/*,image/svg+xml" class="w-full p-3 border rounded" required>
             <button type="submit" class="w-full bg-[#58CC02] text-white p-3 rounded flex items-center justify-center">
               <i class="fas fa-upload mr-2"></i> Publicar Regalo
             </button>
@@ -382,7 +383,7 @@
       document.getElementById('loadingSpinner').style.display = "none";
     }
     
-    /********** FUNCIONES DE TOAST (CONFIRMACIÓN) **********/
+    /********** FUNCIONES DE TOAST (Mensaje de confirmación) **********/
     function showToast(message) {
       const toast = document.getElementById('toast');
       toast.textContent = message;
@@ -1197,7 +1198,6 @@
     }
     
     /********** NUEVA SECCIÓN: REGALOS LIVE (ADMIN) **********/
-    // Publicar un nuevo regalo live
     function publishGift() {
       const title = document.getElementById('giftTitle').value.trim();
       const price = parseInt(document.getElementById('giftPrice').value);
@@ -1216,12 +1216,12 @@
       }
       const file = fileInput.files[0];
       const storageRef = firebase.storage().ref();
-      // Subir a la carpeta "Live" en Storage
+      // Subimos a la carpeta "Live" en Storage para que coincida con la lógica de la plataforma original
       const giftRef = storageRef.child('Live/' + Date.now() + '_' + file.name);
       const uploadTask = giftRef.put(file);
       uploadTask.on('state_changed', 
         function progress(snapshot) {
-          // Opcional: mostrar progreso
+          // (Opcional: Puedes mostrar el progreso)
         },
         function error(err) {
           alert("Error al subir el regalo: " + err.message);
@@ -1235,7 +1235,7 @@
               fileType: file.type,
               timestamp: Date.now()
             };
-            // Guardar en el nodo "liveStreams/Live/gifts"
+            // Guardamos en el nodo "liveStreams/Live/gifts"
             firebase.database().ref('liveStreams/Live/gifts').push(giftData)
               .then(() => {
                 showToast("Regalo '" + title + "' publicado correctamente.");
@@ -1254,7 +1254,6 @@
       publishGift();
     });
     
-    // Escuchar cambios en "liveStreams/Live/gifts" para mostrar la lista
     firebase.database().ref('liveStreams/Live/gifts').on('value', function(snapshot) {
       const giftListDiv = document.getElementById('giftList');
       giftListDiv.innerHTML = "";
@@ -1290,16 +1289,17 @@
     function deleteGift(giftKey) {
       if (confirm("¿Estás seguro de que deseas eliminar este regalo?")) {
         firebase.database().ref('liveStreams/Live/gifts/' + giftKey).remove()
-          .then(() => { alert("Regalo eliminado."); })
+          .then(() => { showToast("Regalo eliminado."); })
           .catch(err => { alert("Error al eliminar el regalo: " + err.message); });
       }
     }
     
     /********** FUNCIONES PARA COMPARTIR PERFIL **********/
-    // Aquí podrías incluir las funciones shareProfile y shareAuthorProfile si lo deseas.
+    // (Aquí se pueden incluir las funciones shareProfile y shareAuthorProfile según las necesites)
     
     /********** RESTO DEL CÓDIGO (historias, capítulos, etc.) **********/
     // Se mantienen sin cambios.
+    
   </script>
 </body>
 </html>
